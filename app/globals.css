@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-xl: var(--radius);
+}
+:root {
+  /* 🌤 Base Surfaces (warmer + less harsh) */
+  --background: hsl(220 25% 97%);
+  --foreground: hsl(222 47% 11%);
+
+  /* 🧱 Cards & Elevation */
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+
+  /* 🎯 Primary Brand (refined indigo) */
+  --primary: hsl(243 72% 58%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  /* 🧊 Secondary Surfaces */
+  --secondary: hsl(220 20% 95%);
+  --secondary-foreground: hsl(222 40% 20%);
+
+  /* 🌫 Muted Text & Backgrounds */
+  --muted: hsl(220 18% 94%);
+  --muted-foreground: hsl(215 14% 45%);
+
+  /* ✨ Accent (slight blue tint instead of gray) */
+  --accent: hsl(225 100% 97%);
+  --accent-foreground: hsl(243 72% 50%);
+
+  /* 🚨 Destructive */
+  --destructive: hsl(0 78% 58%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  /* 🔲 Borders & Inputs (clean + subtle) */
+  --border: hsl(220 18% 88%);
+  --input: hsl(220 18% 90%);
+  --ring: hsl(243 72% 58%);
+
+  /* 🟢 Success / 🟡 Warning / 🔵 Info (NEW) */
+  --success: hsl(142 70% 45%);
+  --success-foreground: hsl(0 0% 100%);
+
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 10%);
+
+  --info: hsl(199 89% 48%);
+  --info-foreground: hsl(0 0% 100%);
+
+  /* 🧠 Depth System (important upgrade) */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 10px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 10px 25px rgba(16, 24, 40, 0.08);
+
+  /* 🔘 Radius */
+  --radius: 0.75rem;
+}
+
+.dark {
+  /* Premium Dark HSL Palette */
+  --background: hsl(224 71% 4%);
+  --foreground: hsl(213 31% 91%);
+
+  --card: hsl(224 71% 4%);
+  --card-foreground: hsl(213 31% 91%);
+
+  --popover: hsl(224 71% 4%);
+  --popover-foreground: hsl(213 31% 91%);
+
+  --primary: hsl(243 75% 59%); 
+  /* Pure Indigo 600 */
+  --primary-foreground: hsl(210 20% 98%);
+
+  --secondary: hsl(222 47% 11%);
+  --secondary-foreground: hsl(213 31% 91%);
+
+  --muted: hsl(222 47% 11%);
+  --muted-foreground: hsl(215 20% 65%);
+
+  --accent: hsl(222 47% 11%);
+  --accent-foreground: hsl(213 31% 91%);
+
+  --destructive: hsl(0 63% 31%);
+  --destructive-foreground: hsl(213 31% 91%);
+
+  --border: hsl(222 47% 11%);
+  --input: hsl(222 47% 11%);
+  --ring: hsl(243 75% 59%);
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+
+  /* Glassmorphism Effect */
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+
+  .dark .glass {
+    @apply bg-slate-900/70 backdrop-blur-md border border-slate-800/20 shadow-xl;
+  }
+
+  /* Premium Hover Transitions */
+  .hover-lift {
+    @apply transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  /* Entry Animations */
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.5s ease-out forwards;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    background: linear-gradient(90deg,
+        hsl(242 72% 59%),
+        hsl(221 83% 53%));
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  /* Premium Figma-like Dotted Background */
+  .bg-dotted {
+    background-image: radial-gradient(circle, var(--dot-color, #e2e8f0) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: local;
+  }
+
+  .dark .bg-dotted {
+    --dot-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Shimmer Effect */
+  .shimmer {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Floating Animation */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Slide Up Animation */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Custom Scrollbar Premium Style */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    opacity: 0.2;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    opacity: 0.4;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30 transition-colors;
+}
