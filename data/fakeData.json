@@ -1,0 +1,106 @@
+{
+    "users": [
+        {
+            "id": 1,
+            "username": "demo_user",
+            "email": "demo@example.com",
+            "rating": 1250,
+            "coins": 1500,
+            "problems_solved": 42,
+            "matches": 15,
+            "peak_rating": 1300,
+            "current_rating": 1250,
+            "current_coins": 1500,
+            "last_active": "2026-03-16T04:25:35Z",
+            "current_streak": 7,
+            "isCurrentUser": true
+        },
+        {
+            "id": 2,
+            "username": "super_coder",
+            "email": "coder@example.com",
+            "rating": 2100,
+            "coins": 5000,
+            "problems_solved": 450,
+            "matches": 80,
+            "peak_rating": 2200,
+            "current_rating": 2100,
+            "current_coins": 5000,
+            "last_active": "2026-03-15T20:00:00Z"
+        }
+    ],
+    "templates": [
+        {
+            "_id": "fake_tpl_1",
+            "name": "Welcome Email",
+            "category": "Onboarding",
+            "channel": "Email",
+            "subject": "Welcome to CCIRP!",
+            "body_html": "<div style='font-family: Arial; padding: 20px;'><h1>Welcome {{name}}!</h1><p>We are glad to have you on board.</p></div>",
+            "version": 1,
+            "created_at": "2026-01-01T10:00:00Z",
+            "updated_at": "2026-01-01T10:00:00Z"
+        },
+        {
+            "_id": "fake_tpl_2",
+            "name": "Meeting Reminder",
+            "category": "Internal",
+            "channel": "Push",
+            "subject": "Reminder: Team Sync",
+            "body_html": "<p>Hi {{name}}, your meeting starts in 15 minutes.</p>",
+            "version": 2,
+            "created_at": "2026-01-05T09:00:00Z",
+            "updated_at": "2026-01-10T15:30:00Z"
+        },
+        {
+            "_id": "fake_tpl_3",
+            "name": "Feedback Request",
+            "category": "Growth",
+            "channel": "SMS",
+            "subject": "How did we do?",
+            "body_html": "Hi {{name}}, let us know how your experience was!",
+            "version": 1,
+            "created_at": "2026-02-15T12:00:00Z",
+            "updated_at": "2026-02-15T12:00:00Z"
+        },
+        {
+            "_id": "fake_tpl_4",
+            "name": "Security Alert",
+            "category": "Security",
+            "channel": "Email",
+            "subject": "Login from new device",
+            "body_html": "<h1>Security Alert</h1><p>A new login was detected for {{name}}.</p>",
+            "version": 1,
+            "created_at": "2026-03-01T08:00:00Z",
+            "updated_at": "2026-03-01T08:00:00Z"
+        },
+        {
+            "_id": "fake_tpl_5",
+            "name": "Monthly Newsletter",
+            "category": "Newsletter",
+            "channel": "Email",
+            "subject": "What's new in March",
+            "body_html": "<div style='background: #f4f4f4; padding: 40px;'><h2>March Newsletter</h2><p>Check out our latest updates!</p></div>",
+            "version": 3,
+            "created_at": "2026-03-05T10:00:00Z",
+            "updated_at": "2026-03-12T11:00:00Z"
+        }
+    ],
+    "discussionRooms": [
+        {
+            "id": 1,
+            "title": "General Discussion",
+            "description": "Talk about anything platform related.",
+            "context_type": "general",
+            "created_at": "2026-01-01T00:00:00Z",
+            "author": {
+                "username": "admin",
+                "avatar": "👤"
+            },
+            "message_count": 50,
+            "view_count": 1200
+        }
+    ],
+    "discussionMessages": [],
+    "quizzes": []
+}
