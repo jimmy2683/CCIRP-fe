@@ -241,6 +241,19 @@ export default function NewCampaignWizard() {
                                     <span className="text-2xl font-black text-foreground">{campaignData.recipients.length}</span>
                                 </div>
                             </div>
+                            <div className="flex gap-2">
+    <button type="button"
+        onClick={() => setCampaignData(prev => ({ ...prev, recipients: users.map(u => u.email) }))}
+        className="text-xs font-bold text-primary hover:underline cursor-pointer">
+        Select All
+    </button>
+    <span className="text-muted-foreground">|</span>
+    <button type="button"
+        onClick={() => setCampaignData(prev => ({ ...prev, recipients: [] }))}
+        className="text-xs font-bold text-muted-foreground hover:underline cursor-pointer">
+        Deselect All
+    </button>
+</div>
                             {isLoading ? (
                                 <div className="flex justify-center p-12"><Loader2 className="animate-spin w-10 h-10 text-primary" /></div>
                             ) : users.length === 0 ? (
