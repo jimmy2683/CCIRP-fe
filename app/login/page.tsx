@@ -45,6 +45,9 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required />
           </div>
+          <div className="text-right">
+            <Link href="#" className="text-xs text-primary hover:underline">Forgot password?</Link>
+          </div>
           <button type="submit" className="w-full cursor-pointer bg-primary text-primary-foreground font-medium py-3 rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all mt-4">
             Sign In
           </button>
