@@ -191,7 +191,12 @@ export const campaignAPI = {
             method: 'POST',
             body: JSON.stringify(data),
         });
-    }
+    },
+    getAnalytics: async (id: string) => {
+        return fetchAPI<any>(`/campaigns/${id}/analytics`, {
+            cacheTTL: DEFAULT_CACHE_TTL,
+        });
+    },
 };
 
 export const userAPI = {
@@ -200,13 +205,45 @@ export const userAPI = {
     }
 };
 
+export const analyticsAPI = {
+    getOverview: async () => {
+        return fetchAPI<any>('/analytics/overview', {
+            cacheTTL: DEFAULT_CACHE_TTL,
+        });
+    },
+    getCampaignAnalytics: async (id: string) => {
+        return fetchAPI<any>(`/analytics/campaigns/${id}`, {
+            cacheTTL: DEFAULT_CACHE_TTL,
+        });
+    },
+};
+
+export const settingsAPI = {
+    getProfile: async () => {
+        return authAPI.getProfile();
+    },
+    updateProfile: async (data: { full_name?: string }) => {
+        return fetchAPI<any>('/auth/me', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    changePassword: async (data: { current_password: string; new_password: string }) => {
+        return fetchAPI<any>('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+};
+
 // Main Export
 export const api = {
     auth: authAPI,
     templates: templateAPI,
     campaigns: campaignAPI,
     users: userAPI,
-    // Discussion, Contest, etc. can be added as needed following this pattern
+    analytics: analyticsAPI,
+    settings: settingsAPI,
 };
 
 export default api;

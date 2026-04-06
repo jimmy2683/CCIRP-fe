@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Plus, Search, Calendar, Users, Send, MoreVertical, Copy, RotateCcw, Loader2 } from 'lucide-react';
+import { Plus, Search, Calendar, Users, Send, MoreVertical, Copy, RotateCcw, Loader2, BarChart3 } from 'lucide-react';
 import { api } from '@/libs/api';
 
 const mockCampaigns = [
@@ -63,22 +63,22 @@ export default function CampaignsPage() {
                     <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><Send className="w-5 h-5" /></div>
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Total Sent This Month</p>
-                            <p className="text-2xl font-bold text-foreground">14,250</p>
+                            <p className="text-sm font-medium text-muted-foreground">Total Campaigns</p>
+                            <p className="text-2xl font-bold text-foreground">{campaigns.length}</p>
                         </div>
                     </div>
                     <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-primary/10 text-primary rounded-xl"><Calendar className="w-5 h-5" /></div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-                            <p className="text-2xl font-bold text-foreground">3</p>
+                            <p className="text-2xl font-bold text-foreground">{campaigns.filter((c: any) => c.status === 'Scheduled').length}</p>
                         </div>
                     </div>
                     <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><Users className="w-5 h-5" /></div>
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Avg Open Rate</p>
-                            <p className="text-2xl font-bold text-foreground">32.4%</p>
+                            <p className="text-sm font-medium text-muted-foreground">Total Recipients</p>
+                            <p className="text-2xl font-bold text-foreground">{campaigns.reduce((sum: number, c: any) => sum + (c.recipients?.length || 0), 0)}</p>
                         </div>
                     </div>
                 </div>
@@ -151,6 +151,9 @@ export default function CampaignsPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                                                    <Link href={`/campaigns/${c._id || c.id}/analytics`} className="hover:text-primary p-1" title="View Analytics">
+                                                        <BarChart3 className="w-4 h-4" />
+                                                    </Link>
                                                     <button className="cursor-pointer hover:text-primary p-1"><RotateCcw className="w-4 h-4" /></button>
                                                     <button className="cursor-pointer hover:text-primary p-1"><Copy className="w-4 h-4" /></button>
                                                     <button className="cursor-pointer hover:text-foreground p-1"><MoreVertical className="w-4 h-4" /></button>
