@@ -1,34 +1,92 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Search, Filter, Plus, MoreVertical, Edit2, Trash2 } from 'lucide-react';
-
-// Mock recipient data
-const INITIAL_RECIPIENTS = [
-    { id: '1', name: 'Sarah Jenkins', email: 'sarah.j@example.com', status: 'Active', tags: ['VIP', 'Newsletter'], lastEngaged: '2 hours ago' },
-    { id: '2', name: 'Michael Chen', email: 'mchen@techcorp.com', status: 'Active', tags: ['Enterprise', 'Product Updates'], lastEngaged: '1 day ago' },
-    { id: '3', name: 'Emma Watson', email: 'emma@studio.design', status: 'Inactive', tags: ['Newsletter'], lastEngaged: '3 months ago' },
-    { id: '4', name: 'David Miller', email: 'david.m@startup.co', status: 'Active', tags: ['Early Adopter'], lastEngaged: '5 days ago' },
-    { id: '5', name: 'Lisa Roberts', email: 'lisa.r@enterprise.com', status: 'Pending', tags: ['Enterprise', 'VIP'], lastEngaged: 'Never' },
-    { id: '6', name: 'James Wilson', email: 'jwilson@example.com', status: 'Active', tags: ['Newsletter'], lastEngaged: '1 week ago' },
-    { id: '7', name: 'Anna Garcia', email: 'anna.g@creative.net', status: 'Active', tags: ['Product Updates'], lastEngaged: '2 days ago' },
-    { id: '8', name: 'Robert Taylor', email: 'rtaylor@corp.com', status: 'Inactive', tags: ['Enterprise'], lastEngaged: '6 months ago' },
-];
+import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, Upload, X } from 'lucide-react';
+import { api } from '@/libs/api';
 
 export default function RecipientsPage() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [recipients, setRecipients] = useState(INITIAL_RECIPIENTS);
+    const [recipients, setRecipients] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isImporting, setIsImporting] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newRecipientData, setNewRecipientData] = useState({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchRecipients = async () => {
+        setIsLoading(true);
+        try {
+            const data = await api.recipients.list();
+            setRecipients(data);
+        } catch (err) {
+            console.error("Failed to load recipients", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRecipients();
+    }, []);
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsImporting(true);
+        try {
+            const response = await api.recipients.importCSV(file);
+            alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
+            fetchRecipients();
+        } catch (err: any) {
+            alert(`Import failed: ${err.message}`);
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleAddSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                ...newRecipientData,
+                tags: newRecipientData.tags.split(',').map(t => t.trim()).filter(t => t)
+            };
+            await api.recipients.create(payload);
+            setNewRecipientData({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
+            setIsAddModalOpen(false);
+            fetchRecipients();
+        } catch (err: any) {
+            alert(`Failed to add: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     // Filter based on search term
     const filteredRecipients = recipients.filter(
         (recipient) =>
-            recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            recipient.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (recipient.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            recipient.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            recipient.email?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-    const handleDelete = (id: string) => {
-        setRecipients(recipients.filter(r => r.id !== id));
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this recipient?")) return;
+        try {
+            await api.recipients.delete(id);
+            setRecipients(recipients.filter(r => r.id !== id));
+        } catch (err: any) {
+            alert(`Failed to delete: ${err.message}`);
+        }
     };
 
     return (
@@ -43,10 +101,29 @@ export default function RecipientsPage() {
                             Unified Database • {recipients.length} Records
                         </p>
                     </div>
-                    <button className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
-                        <Plus className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
-                        Add Intelligence Record
-                    </button>
+                    <div className="flex gap-2">
+                        <input
+                            type="file"
+                            accept=".csv"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                        />
+                        <button
+                            onClick={handleImportClick}
+                            disabled={isImporting}
+                            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-accent px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-foreground hover:bg-accent/80 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                        >
+                            <Upload className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
+                            {isImporting ? 'Importing...' : 'Import CSV'}
+                        </button>
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            <Plus className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
+                            Add Intelligence Record
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters Bar */}
@@ -102,64 +179,71 @@ export default function RecipientsPage() {
                                 {filteredRecipients.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground font-bold uppercase tracking-widest text-xs">
-                                            No intelligence mapping found
+                                            {isLoading ? "Loading mapping..." : "No intelligence mapping found"}
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredRecipients.map((recipient) => (
-                                        <tr key={recipient.id} className="hover:bg-accent/10 transition-colors group">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="h-10 w-10 flex-shrink-0">
-                                                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black shadow-inner shadow-primary/5">
-                                                            {recipient.name.charAt(0)}
+                                    filteredRecipients.map((recipient) => {
+                                        const fullName = `${recipient.first_name} ${recipient.last_name || ''}`.trim();
+                                        const lastEngaged = recipient.engagement?.last_open_at || recipient.engagement?.last_click_at
+                                            ? new Date(recipient.engagement.last_open_at || recipient.engagement.last_click_at).toLocaleDateString()
+                                            : 'Never';
+
+                                        return (
+                                            <tr key={recipient.id} className="hover:bg-accent/10 transition-colors group">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="h-10 w-10 flex-shrink-0">
+                                                            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black shadow-inner shadow-primary/5">
+                                                                {fullName.charAt(0).toUpperCase()}
+                                                            </div>
+                                                        </div>
+                                                        <div className="ml-4">
+                                                            <div className="font-bold text-foreground group-hover:text-primary transition-colors">{fullName}</div>
+                                                            <div className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{recipient.email}</div>
                                                         </div>
                                                     </div>
-                                                    <div className="ml-4">
-                                                        <div className="font-bold text-foreground group-hover:text-primary transition-colors">{recipient.name}</div>
-                                                        <div className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{recipient.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest shadow-sm
+                          ${recipient.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                            recipient.status === 'inactive' ? 'bg-muted text-muted-foreground border border-border' :
+                                                                'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`
+                                                    }>
+                                                        {recipient.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        {(recipient.tags || []).map((tag: string) => (
+                                                            <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/10">
+                                                                {tag}
+                                                            </span>
+                                                        ))}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest shadow-sm
-                          ${recipient.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                        recipient.status === 'Inactive' ? 'bg-muted text-muted-foreground border border-border' :
-                                                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`
-                                                }>
-                                                    {recipient.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {recipient.tags.map((tag) => (
-                                                        <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/10">
-                                                            {tag}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                                {recipient.lastEngaged}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center justify-end gap-3">
-                                                    <button className="cursor-pointer text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-primary/10 transition-all">
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(recipient.id)}
-                                                        className="cursor-pointer text-muted-foreground hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button className="cursor-pointer text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent hover:text-foreground transition-all">
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                                    {lastEngaged}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <button className="cursor-pointer text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-primary/10 transition-all">
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(recipient.id)}
+                                                            className="cursor-pointer text-muted-foreground hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button className="cursor-pointer text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent hover:text-foreground transition-all">
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -197,6 +281,56 @@ export default function RecipientsPage() {
                 </div>
 
             </div>
+
+            {/* Add Modal */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)}></div>
+                    <div className="relative w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl border border-border">
+                        <button onClick={() => setIsAddModalOpen(false)} className="absolute right-4 top-4 text-muted-foreground hover:text-foreground">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-xl font-bold text-foreground mb-6">Add Intelligence Record</h2>
+                        <form onSubmit={handleAddSubmit} className="flex flex-col gap-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">First Name</label>
+                                    <input required type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        value={newRecipientData.first_name} onChange={e => setNewRecipientData({ ...newRecipientData, first_name: e.target.value })} />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last Name</label>
+                                    <input type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        value={newRecipientData.last_name} onChange={e => setNewRecipientData({ ...newRecipientData, last_name: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                                <input required type="email" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    value={newRecipientData.email} onChange={e => setNewRecipientData({ ...newRecipientData, email: e.target.value })} />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Phone Number (Optional)</label>
+                                <input type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    value={newRecipientData.phone} onChange={e => setNewRecipientData({ ...newRecipientData, phone: e.target.value })} />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Segments (comma separated)</label>
+                                <input type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="VIP, Enterprise, Newsletter"
+                                    value={newRecipientData.tags} onChange={e => setNewRecipientData({ ...newRecipientData, tags: e.target.value })} />
+                            </div>
+                            <div className="mt-2 flex justify-end gap-3">
+                                <button type="button" onClick={() => setIsAddModalOpen(false)} className="cursor-pointer rounded-xl px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-accent transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={isSubmitting} className="cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                                    {isSubmitting ? 'Processing...' : 'Save Record'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </DashboardLayout>
     );
 }

@@ -251,6 +251,40 @@ export const settingsAPI = {
     },
 };
 
+export const recipientAPI = {
+    list: async () => {
+        return fetchAPI<any[]>('/recipients/');
+    },
+    get: async (id: string) => {
+        return fetchAPI<any>(`/recipients/${id}`);
+    },
+    create: async (data: any) => {
+        return fetchAPI<any>('/recipients/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    update: async (id: string, data: any) => {
+        return fetchAPI<any>(`/recipients/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    delete: async (id: string) => {
+        return fetchAPI<any>(`/recipients/${id}`, {
+            method: 'DELETE',
+        });
+    },
+    importCSV: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return fetchAPI<any>('/recipients/bulk-import', {
+            method: 'POST',
+            body: formData,
+        });
+    }
+};
+
 // Main Export
 export const api = {
     auth: authAPI,
@@ -259,6 +293,7 @@ export const api = {
     users: userAPI,
     analytics: analyticsAPI,
     settings: settingsAPI,
+    recipients: recipientAPI,
 };
 
 export default api;
