@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "@/libs/api";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/AuthProvider";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -12,6 +13,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +25,11 @@ export default function RegisterPage() {
 
     try {
       await api.auth.register({ email, password, full_name: fullName });
-      router.push("/login");
+      // Clear error and proceed to auto-login
+      const { access_token } = await api.auth.login({ email, password });
+      login(access_token);
     } catch (err: any) {
-      setError(err.message || "Failed to register");
+      setError(err.message || "Failed to register or log in");
     }
   };
 
@@ -33,7 +37,7 @@ export default function RegisterPage() {
     <div className="flex h-screen items-center justify-center bg-background text-foreground">
       <div className="w-full max-w-md rounded-2xl bg-card p-8 backdrop-blur-md border border-border shadow-2xl transform transition-all">
         <h1 className="text-3xl font-semibold mb-6 text-center text-gradient">Join CCIRP</h1>
-        {error && <div className="mb-4 bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg text-sm font-medium">{error}</div>}
+        {error && <div className="mb-6 bg-rose-500/10 border border-rose-500/50 text-rose-500 p-4 rounded-xl text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-300 shadow-[0_0_20px_-5px_rgba(244,63,94,0.3)]">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Full Name</label>

@@ -25,7 +25,7 @@ export default function LoginPage() {
     <div className="flex h-screen items-center justify-center bg-background text-foreground">
       <div className="w-full max-w-md rounded-2xl bg-card p-8 backdrop-blur-md border border-border shadow-2xl">
         <h1 className="text-3xl font-semibold mb-6 text-center text-gradient">CCIRP Sign In</h1>
-        {error && <div className="mb-4 bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg text-sm">{error}</div>}
+        {error && <div className="mb-6 bg-rose-500/10 border border-rose-500/50 text-rose-500 p-4 rounded-xl text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-300 shadow-[0_0_20px_-5px_rgba(244,63,94,0.3)]">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Email</label>

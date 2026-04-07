@@ -88,8 +88,23 @@ async function fetchAPI<T>(endpoint: string, options: FetchOptions = {}): Promis
     }
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.message || errorData.detail || `Error ${response.status}`);
+        let errorMsg = `Error ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorData.message || errorData.detail || errorMsg;
+        } catch (e) {
+            // If response is not JSON, we just use the status code message
+        }
+
+        // Standardize handling of invalid credentials
+        if (response.status === 401 && (errorMsg.toLowerCase().includes("credentials") || errorMsg.toLowerCase().includes("validate"))) {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+            }
+        }
+
+        throw new Error(errorMsg);
     }
 
     if (response.status == 204) return {} as T;

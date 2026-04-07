@@ -34,10 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async () => {
     try {
       const profile = await api.auth.getProfile();
-      setUser(profile);
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
+      if (profile) {
+        setUser(profile);
+      } else {
+        throw new Error("Empty profile received");
+      }
+    } catch (error: any) {
+      console.error("Auth: Failed to fetch profile.", error.message);
       localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -60,9 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
     const hasToken = !!localStorage.getItem("access_token");
 
-    if (!hasToken && !isPublicRoute) {
+    // Unified redirection logic
+    if (!user && !isPublicRoute && !hasToken) {
       router.push("/login");
-    } else if (hasToken && isPublicRoute) {
+    } else if (user && isPublicRoute) {
       router.push("/");
     }
   }, [user, pathname, isLoading, isMounted, router]);
