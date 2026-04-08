@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { api, Template } from "@/libs/api";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -16,6 +17,8 @@ export default function CreateCampaignWizard() {
   // Wizard Data State
   const [campaignName, setCampaignName] = useState("");
   const [subject, setSubject] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [recipients, setRecipients] = useState(""); // comma separated emails for simplicity
   
@@ -38,6 +41,21 @@ export default function CreateCampaignWizard() {
   const handleNext = () => setStep(s => s + 1);
   const handlePrev = () => setStep(s => s - 1);
 
+  const addTag = () => {
+    const cleanTag = tagInput.trim();
+    if (!cleanTag) return;
+    if (tags.some(tag => tag.toLowerCase() === cleanTag.toLowerCase())) {
+      setTagInput("");
+      return;
+    }
+    setTags(prev => [...prev, cleanTag]);
+    setTagInput("");
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
@@ -48,6 +66,7 @@ export default function CreateCampaignWizard() {
         name: campaignName,
         subject: subject,
         template_id: selectedTemplate?._id || "",
+        tags,
         recipients: recipientList,
         scheduled_at: new Date().toISOString() // Sending immediately for this MVP
       });
@@ -107,6 +126,52 @@ export default function CreateCampaignWizard() {
                   placeholder="Subject line for emails"
                 />
               </div>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">Campaign Tags</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag();
+                      }
+                    }}
+                    className="flex-1 bg-muted border border-border rounded-xl p-4 text-foreground focus:ring-2 focus:ring-primary transition-all outline-none"
+                    placeholder="Add one tag at a time"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="inline-flex items-center justify-center rounded-xl bg-primary px-4 text-primary-foreground hover:bg-primary/90 transition-all"
+                    aria-label="Add tag"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                {tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="rounded-full text-primary/80 hover:text-primary"
+                          aria-label={`Remove ${tag}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -164,6 +229,10 @@ export default function CreateCampaignWizard() {
                 <div className="flex justify-between border-b border-border pb-3">
                   <span className="text-muted-foreground">Subject:</span>
                   <span className="font-medium">{subject || "N/A"}</span>
+                </div>
+                <div className="flex justify-between border-b border-border pb-3">
+                  <span className="text-muted-foreground">Tags:</span>
+                  <span className="font-medium">{tags.length > 0 ? tags.join(", ") : "N/A"}</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-3">
                   <span className="text-muted-foreground">Template:</span>

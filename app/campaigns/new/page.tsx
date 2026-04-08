@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { ArrowLeft, Check, ChevronRight, Mail, Users, Calendar, Loader2, Type } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Mail, Users, Calendar, Loader2, Plus, Type, X } from 'lucide-react';
 import { api, Template, UserProfileData } from '@/libs/api';
 
 const STEPS = [
@@ -37,6 +37,8 @@ export default function NewCampaignWizard() {
     const [campaignData, setCampaignData] = useState({
         name: '',
         subject: '',
+        tags: [] as string[],
+        tagInput: '',
         templateId: null as string | null,
         recipients: [] as string[],
         mergeData: {} as Record<string, string>,
@@ -72,6 +74,27 @@ export default function NewCampaignWizard() {
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
+    const addTag = () => {
+        const cleanTag = campaignData.tagInput.trim();
+        if (!cleanTag) return;
+        if (campaignData.tags.some(tag => tag.toLowerCase() === cleanTag.toLowerCase())) {
+            setCampaignData(prev => ({ ...prev, tagInput: '' }));
+            return;
+        }
+        setCampaignData(prev => ({
+            ...prev,
+            tags: [...prev.tags, cleanTag],
+            tagInput: '',
+        }));
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        setCampaignData(prev => ({
+            ...prev,
+            tags: prev.tags.filter(tag => tag !== tagToRemove),
+        }));
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
@@ -79,6 +102,7 @@ export default function NewCampaignWizard() {
                 name: campaignData.name,
                 subject: campaignData.subject || "No Subject",
                 template_id: campaignData.templateId || "",
+                tags: campaignData.tags,
                 recipients: campaignData.recipients,
                 merge_data: campaignData.mergeData,
                 scheduled_at: campaignData.scheduled_at || null
@@ -158,6 +182,55 @@ export default function NewCampaignWizard() {
                                 <div>
                                     <label className="block text-sm font-medium text-muted-foreground">Message Subject</label>
                                     <input type="text" className="mt-1 block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground" placeholder="Subject seen by recipients" value={campaignData.subject} onChange={(e) => setCampaignData({ ...campaignData, subject: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-muted-foreground">Campaign Tags</label>
+                                    <div className="mt-1 flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="block flex-1 rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground"
+                                            placeholder="Add one tag at a time"
+                                            value={campaignData.tagInput}
+                                            onChange={(e) => setCampaignData({ ...campaignData, tagInput: e.target.value })}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addTag();
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={addTag}
+                                            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+                                            aria-label="Add tag"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    {campaignData.tags.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {campaignData.tags.map(tag => (
+                                                <span
+                                                    key={tag}
+                                                    className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                                                >
+                                                    {tag}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeTag(tag)}
+                                                        className="rounded-full text-primary/80 hover:text-primary"
+                                                        aria-label={`Remove ${tag}`}
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        These tags will drive engagement scoring for dynamic groups.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -298,6 +371,20 @@ export default function NewCampaignWizard() {
                                     <div className="mt-2 space-y-1">
                                         <h4 className="text-lg font-bold text-foreground">{campaignData.name || 'Untitled'}</h4>
                                         <p className="text-sm text-primary font-medium">{campaignData.subject || 'No Subject'}</p>
+                                        {campaignData.tags.length > 0 ? (
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {campaignData.tags.map(tag => (
+                                                    <span
+                                                        key={tag}
+                                                        className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary"
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">No tags</p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="p-6 rounded-2xl bg-muted/50 border border-border shadow-inner">
@@ -363,4 +450,3 @@ export default function NewCampaignWizard() {
         </DashboardLayout>
     );
 }
-
