@@ -35,6 +35,54 @@ export interface UserProfileData {
     is_active: boolean;
 }
 
+export interface ConsentFlags {
+    email: boolean;
+    sms: boolean;
+    whatsapp: boolean;
+}
+
+export interface EngagementStats {
+    open_count_total: number;
+    click_count_total: number;
+    unique_open_campaigns: string[];
+    unique_click_campaigns: string[];
+    clicked_domains: string[];
+    tag_scores: Record<string, number>;
+    topic_scores: Record<string, number>;
+    last_open_at: string | null;
+    last_click_at: string | null;
+}
+
+export interface Recipient {
+    id: string;
+    user_id: string;
+    email: string;
+    phone: string | null;
+    first_name: string;
+    last_name: string | null;
+    attributes: Record<string, any>;
+    tags: string[];
+    consent_flags: ConsentFlags;
+    status: string;
+    engagement: EngagementStats;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RecipientCreate {
+    email: string;
+    phone?: string;
+    first_name: string;
+    last_name?: string;
+    attributes?: Record<string, any>;
+    tags?: string[];
+    consent_flags?: ConsentFlags;
+}
+
+export interface RecipientUpdate extends Partial<RecipientCreate> {
+    status?: string;
+}
+
 // Simple in-memory cache
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
@@ -253,19 +301,19 @@ export const settingsAPI = {
 
 export const recipientAPI = {
     list: async () => {
-        return fetchAPI<any[]>('/recipients/');
+        return fetchAPI<Recipient[]>('/recipients/');
     },
     get: async (id: string) => {
-        return fetchAPI<any>(`/recipients/${id}`);
+        return fetchAPI<Recipient>(`/recipients/${id}`);
     },
-    create: async (data: any) => {
-        return fetchAPI<any>('/recipients/', {
+    create: async (data: RecipientCreate) => {
+        return fetchAPI<Recipient>('/recipients/', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     },
-    update: async (id: string, data: any) => {
-        return fetchAPI<any>(`/recipients/${id}`, {
+    update: async (id: string, data: RecipientUpdate) => {
+        return fetchAPI<Recipient>(`/recipients/${id}`, {
             method: 'PUT',
             body: JSON.stringify(data),
         });
@@ -278,7 +326,7 @@ export const recipientAPI = {
     importCSV: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
-        return fetchAPI<any>('/recipients/bulk-import', {
+        return fetchAPI<{success: number, skipped: number, errors: string[]}>('/recipients/bulk-import', {
             method: 'POST',
             body: formData,
         });

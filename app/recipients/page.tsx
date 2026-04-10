@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, Upload, X } from 'lucide-react';
 import { api } from '@/libs/api';
 
 export default function RecipientsPage() {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [recipients, setRecipients] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function RecipientsPage() {
                             onClick={() => setIsAddModalOpen(true)}
                             className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
                             <Plus className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
-                            Add Intelligence Record
+                            Add Recipient
                         </button>
                     </div>
                 </div>
@@ -190,7 +192,11 @@ export default function RecipientsPage() {
                                             : 'Never';
 
                                         return (
-                                            <tr key={recipient.id} className="hover:bg-accent/10 transition-colors group">
+                                            <tr key={recipient.id} onClick={(e) => {
+                                                // Prevent navigation if clicking actions
+                                                if ((e.target as HTMLElement).closest('button')) return;
+                                                router.push(`/recipients/${recipient.id}`);
+                                            }} className="hover:bg-accent/10 transition-colors group cursor-pointer">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="h-10 w-10 flex-shrink-0">
@@ -199,7 +205,7 @@ export default function RecipientsPage() {
                                                             </div>
                                                         </div>
                                                         <div className="ml-4">
-                                                            <div className="font-bold text-foreground group-hover:text-primary transition-colors">{fullName}</div>
+                                                            <div className="font-bold text-foreground group-hover:text-primary transition-colors hover:underline">{fullName}</div>
                                                             <div className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{recipient.email}</div>
                                                         </div>
                                                     </div>
