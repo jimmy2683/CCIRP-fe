@@ -285,6 +285,32 @@ export const recipientAPI = {
     }
 };
 
+export const groupAPI = {
+    list: async () => {
+        return fetchAPI<any[]>('/groups/');
+    },
+    get: async (id: string) => {
+        return fetchAPI<any>(`/groups/${id}`);
+    },
+    create: async (data: any) => {
+        return fetchAPI<any>('/groups/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    update: async (id: string, data: any) => {
+        return fetchAPI<any>(`/groups/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    delete: async (id: string) => {
+        return fetchAPI<any>(`/groups/${id}`, {
+            method: 'DELETE',
+        });
+    },
+};
+
 // Main Export
 export const api = {
     auth: authAPI,
@@ -294,6 +320,7 @@ export const api = {
     analytics: analyticsAPI,
     settings: settingsAPI,
     recipients: recipientAPI,
+    groups: groupAPI,
 };
 
 export default api;

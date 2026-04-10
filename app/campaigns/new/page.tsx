@@ -33,6 +33,7 @@ export default function NewCampaignWizard() {
 
     const [templates, setTemplates] = useState<Template[]>([]);
     const [users, setUsers] = useState<UserProfileData[]>([]);
+    const [groups, setGroups] = useState<any[]>([]);
 
     const [campaignData, setCampaignData] = useState({
         name: '',
@@ -41,6 +42,7 @@ export default function NewCampaignWizard() {
         tagInput: '',
         templateId: null as string | null,
         recipients: [] as string[],
+        groupIds: [] as string[],
         mergeData: {} as Record<string, string>,
         scheduled_at: null as string | null,
     });
@@ -49,12 +51,14 @@ export default function NewCampaignWizard() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [tpls, usrList] = await Promise.all([
+                const [tpls, usrList, groupList] = await Promise.all([
                     api.templates.list(),
-                    api.users.list()
+                    api.users.list(),
+                    api.groups.list()
                 ]);
                 setTemplates(tpls);
                 setUsers(usrList);
+                setGroups(groupList || []);
             } catch (error) {
                 console.error('Failed to fetch wizard data:', error);
             } finally {
@@ -95,6 +99,33 @@ export default function NewCampaignWizard() {
         }));
     };
 
+    const groupRecipients = useMemo(() => {
+        const selectedGroupIds = new Set(campaignData.groupIds);
+        return groups
+            .filter(group => selectedGroupIds.has(group.id))
+            .flatMap(group => group.recipient_emails || []);
+    }, [groups, campaignData.groupIds]);
+
+    const effectiveRecipients = useMemo(() => {
+        const seen = new Set<string>();
+        return [...campaignData.recipients, ...groupRecipients].filter(email => {
+            const cleanEmail = String(email).trim();
+            const key = cleanEmail.toLowerCase();
+            if (!cleanEmail || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [campaignData.recipients, groupRecipients]);
+
+    const toggleGroup = (groupId: string) => {
+        setCampaignData(prev => ({
+            ...prev,
+            groupIds: prev.groupIds.includes(groupId)
+                ? prev.groupIds.filter(id => id !== groupId)
+                : [...prev.groupIds, groupId]
+        }));
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
@@ -103,7 +134,8 @@ export default function NewCampaignWizard() {
                 subject: campaignData.subject || "No Subject",
                 template_id: campaignData.templateId || "",
                 tags: campaignData.tags,
-                recipients: campaignData.recipients,
+                group_ids: campaignData.groupIds,
+                recipients: effectiveRecipients,
                 merge_data: campaignData.mergeData,
                 scheduled_at: campaignData.scheduled_at || null
             });
@@ -311,8 +343,43 @@ export default function NewCampaignWizard() {
                                 </div>
                                 <div className="text-right">
                                     <span className="text-xs font-bold text-primary uppercase tracking-widest leading-none block mb-1">Total Selected</span>
-                                    <span className="text-2xl font-black text-foreground">{campaignData.recipients.length}</span>
+                                    <span className="text-2xl font-black text-foreground">{effectiveRecipients.length}</span>
                                 </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Static Groups</h3>
+                                    <span className="text-xs font-bold text-muted-foreground">{campaignData.groupIds.length} selected</span>
+                                </div>
+                                {groups.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                                        No static groups yet. Create one from the Groups page, or select individual recipients below.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {groups.map(group => {
+                                            const selected = campaignData.groupIds.includes(group.id);
+                                            return (
+                                                <button
+                                                    key={group.id}
+                                                    type="button"
+                                                    onClick={() => toggleGroup(group.id)}
+                                                    className={`rounded-2xl border p-4 text-left transition-all ${selected ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'border-border bg-card hover:border-primary/40 hover:bg-accent/30'}`}
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-sm font-black text-foreground">{group.name}</p>
+                                                            <p className="mt-1 text-xs text-muted-foreground">{group.recipient_count} recipients</p>
+                                                        </div>
+                                                        <span className={`flex h-6 w-6 items-center justify-center rounded-lg border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'}`}>
+                                                            {selected && <Check className="h-3.5 w-3.5" />}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2">
     <button type="button"
@@ -396,8 +463,14 @@ export default function NewCampaignWizard() {
                                         </div>
                                         <div className="flex items-center gap-2 text-xs font-bold text-foreground">
                                             <Users className="w-3.5 h-3.5 text-primary" />
-                                            {campaignData.recipients.length} Target Recipients
+                                            {effectiveRecipients.length} Target Recipients
                                         </div>
+                                        {campaignData.groupIds.length > 0 && (
+                                            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                                                <Users className="w-3.5 h-3.5 text-primary" />
+                                                {campaignData.groupIds.length} Static Groups
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -438,7 +511,7 @@ export default function NewCampaignWizard() {
                             (currentStep === 1 && !campaignData.name) ||
                             (currentStep === 2 && !campaignData.templateId) ||
                             (currentStep === 3 && !allMergeFieldsFilled) ||
-                            (currentStep === 4 && campaignData.recipients.length === 0)
+                            (currentStep === 4 && effectiveRecipients.length === 0)
                         }
                         className="inline-flex items-center rounded-xl bg-primary px-8 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSubmitting ? 'Processing...' : currentStep === 5 ? 'Initiate Dispatch' : 'Continue Path'}

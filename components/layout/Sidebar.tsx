@@ -8,6 +8,7 @@ import {
     FileText,
     Send,
     Users,
+    UserRoundCheck,
     BarChart3,
     Bot,
     Settings
@@ -18,6 +19,7 @@ const navigation = [
     { name: 'Templates', href: '/templates', icon: FileText },
     { name: 'Campaigns', href: '/campaigns', icon: Send },
     { name: 'Recipients', href: '/recipients', icon: Users },
+    { name: 'Groups', href: '/groups', icon: UserRoundCheck },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'AI Assistant', href: '/ai', icon: Bot },
     { name: 'Settings', href: '/settings', icon: Settings },
