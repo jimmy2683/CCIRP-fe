@@ -138,23 +138,14 @@ export default function CampaignsPage() {
                         <div className="p-3 bg-primary/10 text-primary rounded-xl"><Calendar className="w-5 h-5" /></div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-<<<<<<< HEAD
-                            <p className="text-2xl font-bold text-foreground">{campaigns.filter((c) => c.status === 'scheduled').length}</p>
-=======
                             <p className="text-2xl font-bold text-foreground">{filteredCampaigns.filter((campaign) => String(campaign.status).toLowerCase() === 'scheduled').length}</p>
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
                         </div>
                     </div>
                     <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><Users className="w-5 h-5" /></div>
                         <div>
-<<<<<<< HEAD
-                            <p className="text-sm font-medium text-muted-foreground">Total Recipients</p>
-                            <p className="text-2xl font-bold text-foreground">{campaigns.reduce((sum, c) => sum + (c.recipients?.length || 0), 0)}</p>
-=======
                             <p className="text-sm font-medium text-muted-foreground">Visible Recipients</p>
                             <p className="text-2xl font-bold text-foreground">{totalRecipients}</p>
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
                         </div>
                     </div>
                 </div>
@@ -255,31 +246,6 @@ export default function CampaignsPage() {
                                                 <div className="mt-1 text-xs text-muted-foreground">{campaign.subject || 'No subject'}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-<<<<<<< HEAD
-                                                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
-                                                    ${STATUS_STYLES[c.status] || 'bg-muted text-muted-foreground'}`
-                                                }>
-                                                    {formatStatus(c.status)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-muted-foreground">
-                                                <div className="flex flex-col gap-1">
-                                                    <span>{c.recipients?.length || 0}</span>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {(c.channels || ['email']).map((channel) => (
-                                                            <span
-                                                                key={channel}
-                                                                className="inline-flex rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-                                                            >
-                                                                {channel}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                                                {c.scheduled_at ? new Date(c.scheduled_at).toLocaleString() : 'Immediate'}
-=======
                                                 <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${statusBadgeClass(campaign.status)}`}>
                                                     {formatStatus(campaign.status)}
                                                 </span>
@@ -292,7 +258,6 @@ export default function CampaignsPage() {
                                                         {(campaign.recipients || []).length > 2 ? '…' : ''}
                                                     </div>
                                                 )}
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
                                                 {campaign.scheduled_at ? new Date(campaign.scheduled_at).toLocaleString() : 'Immediate'}
