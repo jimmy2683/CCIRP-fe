@@ -133,6 +133,8 @@ export interface DynamicGroupResolvedRecipient {
     dynamic_score: number;
     tag_score: number;
     interaction_count: number;
+    delivery_count: number;
+    campaign_touchpoints: number;
     unique_open_count: number;
     unique_click_count: number;
     last_open_at: string | null;

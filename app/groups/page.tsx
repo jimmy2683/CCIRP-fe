@@ -663,16 +663,41 @@ export default function GroupsPage() {
                         <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-bold text-foreground">Dynamic Group Preferences</h2>
+                                    <h2 className="text-lg font-bold text-foreground">Dynamic Group Builder</h2>
                                     <p className="mt-1 text-sm text-muted-foreground">
-                                        Save one default size per tag. At send time, the final audience is recalculated from live engagement and priority signals.
+                                        Preview a live ranked audience for a tag, then save the default size you want to reuse in campaigns.
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-right">
-                                    <div className="text-[11px] font-bold uppercase tracking-widest text-sky-300">Minimum</div>
+                                    <div className="text-[11px] font-bold uppercase tracking-widest text-sky-300">Threshold</div>
                                     <div className="text-lg font-black text-foreground">{dynamicForm.min_interactions || "1"}</div>
                                 </div>
                             </div>
+
+                            <div className="mt-6 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+                                <p className="text-sm font-bold text-foreground">What counts as an interaction?</p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    A successful tagged delivery counts as one interaction. Unique opens and unique clicks add stronger engagement signals on top of that.
+                                </p>
+                            </div>
+
+                            {filteredDynamicPreferences.length > 0 && (
+                                <div className="mt-4">
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Quick Load Saved Tags</p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {filteredDynamicPreferences.slice(0, 6).map((preference) => (
+                                            <button
+                                                key={`quick-${preference.id}`}
+                                                type="button"
+                                                onClick={() => handleLoadDynamicPreference(preference)}
+                                                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+                                            >
+                                                {preference.tag} • {preference.top_k}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mt-6 space-y-4">
                                 <div>
@@ -705,6 +730,9 @@ export default function GroupsPage() {
                                             value={dynamicForm.min_interactions}
                                             onChange={(event) => setDynamicForm((current) => ({ ...current, min_interactions: event.target.value }))}
                                         />
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Successful deliveries, unique opens, and unique clicks all contribute here.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -809,16 +837,26 @@ export default function GroupsPage() {
 
                             {!dynamicPreview ? (
                                 <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-                                    Preview a tag to inspect the current top-ranked recipients and engagement score.
+                                    Preview a tag to inspect the current top-ranked recipients and see how deliveries, opens, and clicks contribute to eligibility.
                                 </div>
                             ) : (
                                 <div className="space-y-4">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <div className="rounded-2xl border border-border bg-background p-4">
+                                            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Eligible</p>
+                                            <p className="mt-2 text-2xl font-black text-foreground">{dynamicPreview.total_eligible}</p>
+                                        </div>
+                                        <div className="rounded-2xl border border-border bg-background p-4">
+                                            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Group Size</p>
+                                            <p className="mt-2 text-2xl font-black text-foreground">{dynamicPreview.top_k}</p>
+                                        </div>
+                                        <div className="rounded-2xl border border-border bg-background p-4">
+                                            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Min Interactions</p>
+                                            <p className="mt-2 text-2xl font-black text-foreground">{dynamicPreview.min_interactions}</p>
+                                        </div>
+                                    </div>
                                     <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground">
-                                        Eligible recipients: <span className="font-semibold text-foreground">{dynamicPreview.total_eligible}</span>
-                                        {" • "}
-                                        Group size: <span className="font-semibold text-foreground">{dynamicPreview.top_k}</span>
-                                        {" • "}
-                                        Min interactions: <span className="font-semibold text-foreground">{dynamicPreview.min_interactions}</span>
+                                        A recipient is eligible once their interaction count reaches the threshold. Interaction count currently considers successful deliveries, unique opens, unique clicks, and any historical tag interaction totals already stored on the recipient.
                                     </div>
                                     <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-border">
                                         {dynamicPreview.recipients.length === 0 ? (
@@ -837,8 +875,24 @@ export default function GroupsPage() {
                                                     <div>
                                                         <div className="font-medium text-foreground">{recipient.name}</div>
                                                         <div className="text-xs text-muted-foreground">{recipient.email}</div>
-                                                        <div className="mt-1 text-[11px] text-muted-foreground">
-                                                            Interactions {recipient.interaction_count} • Opens {recipient.unique_open_count} • Clicks {recipient.unique_click_count}
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+                                                                Interactions {recipient.interaction_count}
+                                                            </span>
+                                                            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
+                                                                Deliveries {recipient.delivery_count}
+                                                            </span>
+                                                            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
+                                                                Opens {recipient.unique_open_count}
+                                                            </span>
+                                                            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
+                                                                Clicks {recipient.unique_click_count}
+                                                            </span>
+                                                            {recipient.campaign_touchpoints > 0 && (
+                                                                <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
+                                                                    Touchpoints {recipient.campaign_touchpoints}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
