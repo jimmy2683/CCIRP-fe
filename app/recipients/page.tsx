@@ -52,13 +52,8 @@ export default function RecipientsPage() {
             const response = await api.recipients.importCSV(file);
             alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
             fetchRecipients();
-<<<<<<< HEAD
-        } catch (err: unknown) {
-            alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-=======
         } catch (error: unknown) {
             alert(`Import failed: ${getErrorMessage(error, 'Could not import CSV')}`);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -77,13 +72,8 @@ export default function RecipientsPage() {
             setNewRecipientData({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
             setIsAddModalOpen(false);
             fetchRecipients();
-<<<<<<< HEAD
-        } catch (err: unknown) {
-            alert(`Failed to add: ${err instanceof Error ? err.message : 'Unknown error'}`);
-=======
         } catch (error: unknown) {
             alert(`Failed to add: ${getErrorMessage(error, 'Could not create recipient')}`);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsSubmitting(false);
         }
@@ -108,13 +98,8 @@ export default function RecipientsPage() {
         try {
             await api.recipients.delete(id);
             setRecipients(recipients.filter(r => r.id !== id));
-<<<<<<< HEAD
-        } catch (err: unknown) {
-            alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
-=======
         } catch (error: unknown) {
             alert(`Failed to delete: ${getErrorMessage(error, 'Could not delete recipient')}`);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }
     };
 

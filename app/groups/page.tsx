@@ -68,15 +68,6 @@ export default function GroupsPage() {
     const recipientSearchPattern = parseSearchPattern(recipientSearch);
 
     const filteredGroups = useMemo(() => {
-<<<<<<< HEAD
-        const q = searchTerm.toLowerCase();
-        return groups.filter(group =>
-            group.name?.toLowerCase().includes(q) ||
-            group.description?.toLowerCase().includes(q) ||
-            group.recipient_emails?.some((email) => email.toLowerCase().includes(q))
-        );
-    }, [groups, searchTerm]);
-=======
         return groups.filter((group) => {
             const recipientNames = (group.recipient_ids || []).map((recipientId: string) => {
                 const recipient = recipientsById[recipientId];
@@ -103,7 +94,6 @@ export default function GroupsPage() {
             return matchesSearchPattern(recipientSearchPattern, fullName, recipient.email);
         });
     }, [recipientSearchPattern, recipients]);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
 
     const selectedImportGroups = useMemo(
         () => groups.filter((group) => newGroup.importGroupIds.includes(group.id)),
@@ -121,14 +111,7 @@ export default function GroupsPage() {
     );
 
     const toggleRecipient = (recipientId: string) => {
-<<<<<<< HEAD
-        if (importedRecipientIds.includes(recipientId) && !newGroup.recipientIds.includes(recipientId)) {
-            return;
-        }
-        setNewGroup(prev => ({
-=======
         setNewGroup((prev) => ({
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
             ...prev,
             recipientIds: prev.recipientIds.includes(recipientId)
                 ? prev.recipientIds.filter((id) => id !== recipientId)
@@ -136,14 +119,6 @@ export default function GroupsPage() {
         }));
     };
 
-<<<<<<< HEAD
-    const toggleImportGroup = (groupId: string) => {
-        setNewGroup((prev) => ({
-            ...prev,
-            importGroupIds: prev.importGroupIds.includes(groupId)
-                ? prev.importGroupIds.filter((id) => id !== groupId)
-                : [...prev.importGroupIds, groupId],
-=======
     const selectFilteredRecipients = () => {
         setNewGroup((prev) => ({
             ...prev,
@@ -151,18 +126,13 @@ export default function GroupsPage() {
                 prev.recipientIds,
                 filteredRecipients.map((recipient) => recipient.id),
             ),
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }));
     };
 
     const resetModal = () => {
-<<<<<<< HEAD
-        setNewGroup({ name: '', description: '', recipientIds: [], importGroupIds: [] });
-=======
         setNewGroup({ name: '', description: '', recipientIds: [] });
         setRecipientSearch('');
         setCsvSummary(null);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         setIsModalOpen(false);
     };
 
@@ -179,11 +149,7 @@ export default function GroupsPage() {
             resetModal();
             await fetchData();
         } catch (error: unknown) {
-<<<<<<< HEAD
-            alert(error instanceof Error ? error.message : 'Failed to create static group');
-=======
             alert(getErrorMessage(error, 'Failed to create static group'));
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsSubmitting(false);
         }
@@ -193,11 +159,6 @@ export default function GroupsPage() {
         if (!confirm('Delete this static group? Campaigns already sent to it will keep their recipient snapshots.')) return;
         try {
             await api.groups.delete(groupId);
-<<<<<<< HEAD
-            setGroups(prev => prev.filter(group => group.id !== groupId));
-        } catch (error: unknown) {
-            alert(error instanceof Error ? error.message : 'Failed to delete static group');
-=======
             setGroups((prev) => prev.filter((group) => group.id !== groupId));
         } catch (error: unknown) {
             alert(getErrorMessage(error, 'Failed to delete static group'));
@@ -223,7 +184,6 @@ export default function GroupsPage() {
             if (csvInputRef.current) {
                 csvInputRef.current.value = '';
             }
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }
     };
 
@@ -489,17 +449,9 @@ export default function GroupsPage() {
                                     ) : filteredRecipients.length === 0 ? (
                                         <div className="p-6 text-center text-sm font-bold text-muted-foreground">No recipients matched the current search.</div>
                                     ) : (
-<<<<<<< HEAD
-                                        recipients.map(recipient => {
-                                            const selected = effectiveRecipientIds.includes(recipient.id);
-                                            const imported = importedRecipientIds.includes(recipient.id);
-                                            const direct = newGroup.recipientIds.includes(recipient.id);
-                                            const fullName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || recipient.email;
-=======
                                         filteredRecipients.map((recipient) => {
                                             const selected = newGroup.recipientIds.includes(recipient.id);
                                             const fullName = formatRecipientName(recipient.first_name, recipient.last_name, recipient.email);
->>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
                                             return (
                                                 <button
                                                     key={recipient.id}
