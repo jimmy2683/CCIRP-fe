@@ -121,6 +121,26 @@ export interface Campaign {
     recipients: string[];
     merge_data: Record<string, string>;
     scheduled_at?: string | null;
+    queue_summary?: {
+        algorithm_version?: string;
+        total: number;
+        queued: number;
+        processing: number;
+        completed: number;
+        failed: number;
+        cancelled: number;
+        levels?: Record<string, number>;
+        next_available_at?: string | null;
+    };
+    delivery_summary?: {
+        total_attempts: number;
+        failed_attempts: number;
+        successful_attempts: number;
+    };
+    priority_algorithm_version?: string | null;
+    queue_prepared_at?: string | null;
+    dispatch_started_at?: string | null;
+    dispatch_completed_at?: string | null;
     created_by: string;
     created_at: string;
 }
