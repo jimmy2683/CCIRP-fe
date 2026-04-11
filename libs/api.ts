@@ -51,6 +51,7 @@ export interface EngagementStats {
     unique_click_campaigns: string[];
     clicked_domains: string[];
     tag_scores: Record<string, number>;
+    tag_interaction_counts: Record<string, number>;
     topic_scores: Record<string, number>;
     last_open_at: string | null;
     last_click_at: string | null;
@@ -108,6 +109,50 @@ export interface StaticGroupCreatePayload {
 
 export interface StaticGroupUpdatePayload extends Partial<StaticGroupCreatePayload> {}
 
+export interface DynamicGroupPreference {
+    id: string;
+    tag: string;
+    tag_key: string;
+    top_k: number;
+    min_interactions: number;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DynamicGroupRequest {
+    tag: string;
+    top_k?: number;
+    min_interactions?: number;
+}
+
+export interface DynamicGroupResolvedRecipient {
+    id: string;
+    email: string;
+    name: string;
+    dynamic_score: number;
+    tag_score: number;
+    interaction_count: number;
+    unique_open_count: number;
+    unique_click_count: number;
+    last_open_at: string | null;
+    last_click_at: string | null;
+}
+
+export interface DynamicGroupResolvedAudience {
+    tag: string;
+    tag_key: string;
+    top_k: number;
+    min_interactions: number;
+    used_saved_top_k: boolean;
+    total_eligible: number;
+    recipients: DynamicGroupResolvedRecipient[];
+}
+
+export interface DynamicGroupResolveResponse {
+    groups: DynamicGroupResolvedAudience[];
+}
+
 export interface Campaign {
     id: string;
     _id?: string;
@@ -117,6 +162,7 @@ export interface Campaign {
     channels: CampaignChannel[];
     tags: string[];
     group_ids?: string[];
+    dynamic_groups?: DynamicGroupResolvedAudience[];
     status: string;
     recipients: string[];
     merge_data: Record<string, string>;
@@ -152,6 +198,7 @@ export interface CampaignCreatePayload {
     channels: CampaignChannel[];
     tags?: string[];
     group_ids?: string[];
+    dynamic_groups?: DynamicGroupRequest[];
     recipients?: string[];
     merge_data?: Record<string, string>;
     scheduled_at?: string | null;
@@ -480,6 +527,21 @@ export const groupAPI = {
         return fetchAPI<GroupCsvImportResult>('/groups/import-csv', {
             method: 'POST',
             body: formData,
+        });
+    },
+    listDynamicPreferences: async () => {
+        return fetchAPI<DynamicGroupPreference[]>('/groups/dynamic/preferences');
+    },
+    saveDynamicPreference: async (data: DynamicGroupRequest & { top_k: number }) => {
+        return fetchAPI<DynamicGroupPreference>('/groups/dynamic/preferences', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    resolveDynamicGroups: async (groups: DynamicGroupRequest[]) => {
+        return fetchAPI<DynamicGroupResolveResponse>('/groups/dynamic/resolve', {
+            method: 'POST',
+            body: JSON.stringify({ groups }),
         });
     },
 };

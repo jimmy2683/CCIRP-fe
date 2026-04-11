@@ -15,17 +15,35 @@ import {
     MessageSquare,
     Phone,
     Plus,
+    RefreshCw,
+    Sparkles,
     Type,
     Users,
     X,
 } from 'lucide-react';
-import { api, CampaignChannel, Recipient, Template, UserProfileData } from '@/libs/api';
+import {
+    api,
+    CampaignChannel,
+    DynamicGroupPreference,
+    DynamicGroupResolvedAudience,
+    Recipient,
+    Template,
+    UserProfileData,
+} from '@/libs/api';
 
 interface CampaignGroup {
     id: string;
     name: string;
     recipient_count: number;
     recipient_emails: string[];
+}
+
+interface SelectedDynamicGroupConfig {
+    tagKey: string;
+    tag: string;
+    savedTopK: number;
+    savedMinInteractions: number;
+    topKOverride: string;
 }
 
 const STEPS = [
@@ -66,6 +84,10 @@ export default function NewCampaignWizard() {
     const [users, setUsers] = useState<UserProfileData[]>([]);
     const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [groups, setGroups] = useState<CampaignGroup[]>([]);
+    const [dynamicPreferences, setDynamicPreferences] = useState<DynamicGroupPreference[]>([]);
+    const [dynamicGroupPreview, setDynamicGroupPreview] = useState<DynamicGroupResolvedAudience[]>([]);
+    const [isResolvingDynamicGroups, setIsResolvingDynamicGroups] = useState(false);
+    const [dynamicPreviewStale, setDynamicPreviewStale] = useState(false);
 
     const [campaignData, setCampaignData] = useState({
         name: '',
@@ -76,6 +98,7 @@ export default function NewCampaignWizard() {
         templateId: null as string | null,
         recipients: [] as string[],
         groupIds: [] as string[],
+        dynamicGroups: [] as SelectedDynamicGroupConfig[],
         mergeData: {} as Record<string, string>,
         scheduledAt: '',
     });
@@ -84,16 +107,18 @@ export default function NewCampaignWizard() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [templateList, userList, recipientList, groupList] = await Promise.all([
+                const [templateList, userList, recipientList, groupList, dynamicPreferenceList] = await Promise.all([
                     api.templates.list(),
                     api.users.list(),
                     api.recipients.list(),
                     api.groups.list(),
+                    api.groups.listDynamicPreferences(),
                 ]);
                 setTemplates(templateList || []);
                 setUsers((userList || []).filter(user => !!user.phone));
                 setRecipients(recipientList || []);
                 setGroups(groupList || []);
+                setDynamicPreferences(dynamicPreferenceList || []);
             } catch (error) {
                 console.error('Failed to fetch wizard data:', error);
             } finally {
@@ -121,16 +146,42 @@ export default function NewCampaignWizard() {
             .flatMap(group => group.recipient_emails || []);
     }, [campaignData.groupIds, groups]);
 
+    const dynamicGroupRequests = useMemo(() => (
+        campaignData.dynamicGroups.map(group => {
+            const parsedTopK = Number(group.topKOverride);
+            return {
+                tag: group.tag,
+                top_k: group.topKOverride.trim() && Number.isFinite(parsedTopK) && parsedTopK > 0
+                    ? parsedTopK
+                    : undefined,
+                min_interactions: group.savedMinInteractions,
+            };
+        })
+    ), [campaignData.dynamicGroups]);
+
+    const dynamicGroupRecipients = useMemo(() => {
+        const seen = new Set<string>();
+        return dynamicGroupPreview
+            .flatMap(group => group.recipients || [])
+            .map(recipient => String(recipient.email || '').trim())
+            .filter(email => {
+                const key = email.toLowerCase();
+                if (!email || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+    }, [dynamicGroupPreview]);
+
     const effectiveRecipients = useMemo(() => {
         const seen = new Set<string>();
-        return [...campaignData.recipients, ...groupRecipients].filter(email => {
+        return [...campaignData.recipients, ...groupRecipients, ...dynamicGroupRecipients].filter(email => {
             const cleanEmail = String(email).trim();
             const key = cleanEmail.toLowerCase();
             if (!cleanEmail || seen.has(key)) return false;
             seen.add(key);
             return true;
         });
-    }, [campaignData.recipients, groupRecipients]);
+    }, [campaignData.recipients, dynamicGroupRecipients, groupRecipients]);
 
     const recipientDirectory = useMemo(
         () => Object.fromEntries(recipients.map(recipient => [recipient.email, recipient])),
@@ -162,6 +213,16 @@ export default function NewCampaignWizard() {
     }, [effectiveRecipients, recipientDirectory, userDirectory]);
 
     const allMergeFieldsFilled = mergeFields.length === 0 || mergeFields.every(field => (campaignData.mergeData[field] || '').trim() !== '');
+
+    useEffect(() => {
+        if (campaignData.dynamicGroups.length === 0) {
+            setDynamicGroupPreview([]);
+            setDynamicPreviewStale(false);
+            return;
+        }
+        setDynamicGroupPreview([]);
+        setDynamicPreviewStale(true);
+    }, [campaignData.dynamicGroups]);
 
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -209,6 +270,38 @@ export default function NewCampaignWizard() {
         }));
     };
 
+    const toggleDynamicGroup = (preference: DynamicGroupPreference) => {
+        setCampaignData(prev => {
+            const existing = prev.dynamicGroups.find(group => group.tagKey === preference.tag_key);
+            return {
+                ...prev,
+                dynamicGroups: existing
+                    ? prev.dynamicGroups.filter(group => group.tagKey !== preference.tag_key)
+                    : [
+                        ...prev.dynamicGroups,
+                        {
+                            tagKey: preference.tag_key,
+                            tag: preference.tag,
+                            savedTopK: preference.top_k,
+                            savedMinInteractions: preference.min_interactions,
+                            topKOverride: '',
+                        },
+                    ],
+            };
+        });
+    };
+
+    const updateDynamicGroupOverride = (tagKey: string, topKOverride: string) => {
+        setCampaignData(prev => ({
+            ...prev,
+            dynamicGroups: prev.dynamicGroups.map(group => (
+                group.tagKey === tagKey
+                    ? { ...group, topKOverride }
+                    : group
+            )),
+        }));
+    };
+
     const toggleRecipient = (email: string) => {
         setCampaignData(prev => ({
             ...prev,
@@ -225,6 +318,26 @@ export default function NewCampaignWizard() {
         }));
     };
 
+    const refreshDynamicAudiencePreview = async () => {
+        if (dynamicGroupRequests.length === 0) {
+            setDynamicGroupPreview([]);
+            setDynamicPreviewStale(false);
+            return;
+        }
+
+        setIsResolvingDynamicGroups(true);
+        try {
+            const response = await api.groups.resolveDynamicGroups(dynamicGroupRequests);
+            setDynamicGroupPreview(response.groups || []);
+            setDynamicPreviewStale(false);
+        } catch (error) {
+            console.error('Failed to resolve dynamic groups:', error);
+            alert('Failed to resolve dynamic groups. Please try again.');
+        } finally {
+            setIsResolvingDynamicGroups(false);
+        }
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
@@ -235,7 +348,8 @@ export default function NewCampaignWizard() {
                 channels: campaignData.channels,
                 tags: campaignData.tags,
                 group_ids: campaignData.groupIds,
-                recipients: effectiveRecipients,
+                dynamic_groups: dynamicGroupRequests,
+                recipients: campaignData.recipients,
                 merge_data: campaignData.mergeData,
                 scheduled_at: campaignData.scheduledAt ? new Date(campaignData.scheduledAt).toISOString() : null,
             });
@@ -508,6 +622,137 @@ export default function NewCampaignWizard() {
                                 )}
                             </div>
 
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Dynamic Groups</h3>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            These audiences are ranked per tag using live engagement scores and are recalculated again when the campaign queue is prepared.
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-bold text-muted-foreground">{campaignData.dynamicGroups.length} selected</span>
+                                </div>
+
+                                {dynamicPreferences.length === 0 ? (
+                                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                                        No dynamic-group preferences yet. Save one from the Groups page first.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {dynamicPreferences.map(preference => {
+                                            const selectedGroup = campaignData.dynamicGroups.find(group => group.tagKey === preference.tag_key);
+                                            const selected = !!selectedGroup;
+                                            return (
+                                                <div
+                                                    key={preference.id}
+                                                    className={`rounded-2xl border p-4 transition-all ${selected ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'border-border bg-card'}`}
+                                                >
+                                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleDynamicGroup(preference)}
+                                                            className="flex-1 text-left"
+                                                        >
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Sparkles className="h-4 w-4 text-primary" />
+                                                                        <p className="text-sm font-black text-foreground">{preference.tag}</p>
+                                                                    </div>
+                                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                                        Saved size {preference.top_k} • Min interactions {preference.min_interactions}
+                                                                    </p>
+                                                                </div>
+                                                                <span className={`flex h-6 w-6 items-center justify-center rounded-lg border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'}`}>
+                                                                    {selected && <Check className="h-3.5 w-3.5" />}
+                                                                </span>
+                                                            </div>
+                                                        </button>
+
+                                                        {selectedGroup && (
+                                                            <div className="flex items-center gap-3">
+                                                                <div>
+                                                                    <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground">Send Size Override</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        value={selectedGroup.topKOverride}
+                                                                        onChange={(event) => updateDynamicGroupOverride(preference.tag_key, event.target.value)}
+                                                                        className="mt-1 w-32 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-primary"
+                                                                        placeholder={String(preference.top_k)}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {campaignData.dynamicGroups.length > 0 && (
+                                    <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-sm font-bold text-foreground">Dynamic audience preview</p>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    Refresh this preview after changing the selected tags or any `top_k` override.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={refreshDynamicAudiencePreview}
+                                                disabled={isResolvingDynamicGroups}
+                                                className="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/50 disabled:opacity-60"
+                                            >
+                                                {isResolvingDynamicGroups ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                                                Refresh Preview
+                                            </button>
+                                        </div>
+
+                                        {dynamicPreviewStale && (
+                                            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                                                Dynamic-group settings changed. Refresh the preview before continuing.
+                                            </div>
+                                        )}
+
+                                        {dynamicGroupPreview.length > 0 && (
+                                            <div className="space-y-3">
+                                                {dynamicGroupPreview.map(group => (
+                                                    <div key={group.tag_key} className="rounded-xl border border-border bg-card p-4">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <p className="text-sm font-black text-foreground">{group.tag}</p>
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    {group.recipients.length} selected now from {group.total_eligible} eligible recipients
+                                                                </p>
+                                                            </div>
+                                                            <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+                                                                top {group.top_k}
+                                                            </span>
+                                                        </div>
+                                                        {group.recipients.length > 0 && (
+                                                            <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                                                                {group.recipients.slice(0, 4).map(recipient => (
+                                                                    <div key={`${group.tag_key}-${recipient.email}`} className="flex items-center justify-between gap-3">
+                                                                        <span className="truncate">{recipient.name} • {recipient.email}</span>
+                                                                        <span className="font-bold text-foreground">{recipient.dynamic_score}</span>
+                                                                    </div>
+                                                                ))}
+                                                                {group.recipients.length > 4 && (
+                                                                    <div>...and {group.recipients.length - 4} more recipients.</div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex gap-2">
                                 <button
                                     type="button"
@@ -624,6 +869,12 @@ export default function NewCampaignWizard() {
                                                 {campaignData.groupIds.length} Static Groups
                                             </div>
                                         )}
+                                        {campaignData.dynamicGroups.length > 0 && (
+                                            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                                                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                                                {campaignData.dynamicGroups.length} Dynamic Groups
+                                            </div>
+                                        )}
                                         {campaignData.channels.some(channel => channel !== 'email') && (
                                             <div className="text-xs text-muted-foreground pt-2">
                                                 SMS ready: {channelReadiness.smsReady} • WhatsApp ready: {channelReadiness.whatsappReady}
@@ -644,6 +895,25 @@ export default function NewCampaignWizard() {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            )}
+
+                            {campaignData.dynamicGroups.length > 0 && (
+                                <div className="p-6 rounded-2xl bg-muted/50 border border-border shadow-inner">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dynamic Audience</span>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {campaignData.dynamicGroups.map(group => (
+                                            <span
+                                                key={group.tagKey}
+                                                className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary"
+                                            >
+                                                {group.tag} • {group.topKOverride.trim() || group.savedTopK}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <p className="mt-3 text-xs text-muted-foreground">
+                                        The backend recalculates these dynamic audiences again when the priority queue is prepared.
+                                    </p>
                                 </div>
                             )}
 
@@ -676,7 +946,10 @@ export default function NewCampaignWizard() {
                             (currentStep === 1 && (!campaignData.name || campaignData.channels.length === 0)) ||
                             (currentStep === 2 && !campaignData.templateId) ||
                             (currentStep === 3 && !allMergeFieldsFilled) ||
-                            (currentStep === 4 && effectiveRecipients.length === 0)
+                            (currentStep === 4 && (
+                                effectiveRecipients.length === 0 ||
+                                (campaignData.dynamicGroups.length > 0 && dynamicPreviewStale)
+                            ))
                         }
                         className="inline-flex items-center rounded-xl bg-primary px-8 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
