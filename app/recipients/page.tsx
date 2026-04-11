@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, Upload, X } from 'lucide-react';
 import { api, Recipient } from '@/libs/api';
+import { matchesSearchPattern, parseSearchPattern, REGEX_SEARCH_HINT } from '@/libs/search';
+import { useQueryParamState } from '@/libs/useQueryParamState';
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
 
 export default function RecipientsPage() {
     const router = useRouter();
-    const [searchTerm, setSearchTerm] = useState('');
+    const { value: searchTerm, setValue: setSearchTerm } = useQueryParamState('q');
     const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isImporting, setIsImporting] = useState(false);
@@ -46,8 +52,13 @@ export default function RecipientsPage() {
             const response = await api.recipients.importCSV(file);
             alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
             fetchRecipients();
+<<<<<<< HEAD
         } catch (err: unknown) {
             alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+=======
+        } catch (error: unknown) {
+            alert(`Import failed: ${getErrorMessage(error, 'Could not import CSV')}`);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -66,28 +77,44 @@ export default function RecipientsPage() {
             setNewRecipientData({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
             setIsAddModalOpen(false);
             fetchRecipients();
+<<<<<<< HEAD
         } catch (err: unknown) {
             alert(`Failed to add: ${err instanceof Error ? err.message : 'Unknown error'}`);
+=======
+        } catch (error: unknown) {
+            alert(`Failed to add: ${getErrorMessage(error, 'Could not create recipient')}`);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsSubmitting(false);
         }
     };
 
     // Filter based on search term
-    const filteredRecipients = recipients.filter(
-        (recipient) =>
-        (recipient.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            recipient.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            recipient.email?.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const searchPattern = parseSearchPattern(searchTerm);
+    const filteredRecipients = recipients.filter((recipient) => {
+        const fullName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim();
+        return matchesSearchPattern(
+            searchPattern,
+            fullName,
+            recipient.first_name,
+            recipient.last_name,
+            recipient.email,
+            ...(recipient.tags || []),
+        );
+    });
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this recipient?")) return;
         try {
             await api.recipients.delete(id);
             setRecipients(recipients.filter(r => r.id !== id));
+<<<<<<< HEAD
         } catch (err: unknown) {
             alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
+=======
+        } catch (error: unknown) {
+            alert(`Failed to delete: ${getErrorMessage(error, 'Could not delete recipient')}`);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }
     };
 
@@ -137,7 +164,7 @@ export default function RecipientsPage() {
                         <input
                             type="text"
                             className="block w-full rounded-xl bg-muted border-border pl-11 focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-xs border py-2.5 text-foreground placeholder:text-muted-foreground font-medium"
-                            placeholder="Search by identity or metadata..."
+                            placeholder={`Search by identity or metadata. ${REGEX_SEARCH_HINT}`}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -153,6 +180,12 @@ export default function RecipientsPage() {
                         </button>
                     </div>
                 </div>
+
+                {!searchPattern.isValid && (
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                        Regex search is invalid: {searchPattern.error}
+                    </div>
+                )}
 
                 {/* Data Table */}
                 <div className="bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">

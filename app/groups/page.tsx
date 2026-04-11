@@ -1,27 +1,41 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Check, Plus, Search, Trash2, Users, X } from 'lucide-react';
-import { api, Recipient, StaticGroup } from '@/libs/api';
+import { Check, Plus, Search, Trash2, Upload, Users, Wand2, X } from 'lucide-react';
+import { api, GroupCsvImportResult, Recipient } from '@/libs/api';
+import { formatRecipientName, matchesSearchPattern, parseSearchPattern, REGEX_SEARCH_HINT } from '@/libs/search';
+import { useQueryParamState } from '@/libs/useQueryParamState';
 
-function dedupeStrings(values: string[]) {
-    return Array.from(new Set(values.filter(Boolean)));
+interface StaticGroup {
+    id: string;
+    name: string;
+    description?: string | null;
+    recipient_ids: string[];
+    recipient_emails: string[];
+    recipient_count: number;
+}
+
+function mergeRecipientIds(current: string[], incoming: string[]) {
+    return Array.from(new Set([...current, ...incoming]));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
 }
 
 export default function GroupsPage() {
+    const { value: searchTerm, setValue: setSearchTerm } = useQueryParamState('q');
     const [groups, setGroups] = useState<StaticGroup[]>([]);
     const [recipients, setRecipients] = useState<Recipient[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [newGroup, setNewGroup] = useState({
-        name: '',
-        description: '',
-        recipientIds: [] as string[],
-        importGroupIds: [] as string[],
-    });
+    const [isImportingCsv, setIsImportingCsv] = useState(false);
+    const [recipientSearch, setRecipientSearch] = useState('');
+    const [csvSummary, setCsvSummary] = useState<GroupCsvImportResult | null>(null);
+    const csvInputRef = useRef<HTMLInputElement>(null);
+    const [newGroup, setNewGroup] = useState({ name: '', description: '', recipientIds: [] as string[] });
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -43,7 +57,18 @@ export default function GroupsPage() {
         fetchData();
     }, []);
 
+    const recipientsById = useMemo(() => {
+        return recipients.reduce<Record<string, Recipient>>((map, recipient) => {
+            map[recipient.id] = recipient;
+            return map;
+        }, {});
+    }, [recipients]);
+
+    const groupSearchPattern = parseSearchPattern(searchTerm);
+    const recipientSearchPattern = parseSearchPattern(recipientSearch);
+
     const filteredGroups = useMemo(() => {
+<<<<<<< HEAD
         const q = searchTerm.toLowerCase();
         return groups.filter(group =>
             group.name?.toLowerCase().includes(q) ||
@@ -51,6 +76,34 @@ export default function GroupsPage() {
             group.recipient_emails?.some((email) => email.toLowerCase().includes(q))
         );
     }, [groups, searchTerm]);
+=======
+        return groups.filter((group) => {
+            const recipientNames = (group.recipient_ids || []).map((recipientId: string) => {
+                const recipient = recipientsById[recipientId];
+                return formatRecipientName(
+                    recipient?.first_name,
+                    recipient?.last_name,
+                    recipient?.email,
+                );
+            });
+
+            return matchesSearchPattern(
+                groupSearchPattern,
+                group.name,
+                group.description,
+                ...(group.recipient_emails || []),
+                ...recipientNames,
+            );
+        });
+    }, [groupSearchPattern, groups, recipientsById]);
+
+    const filteredRecipients = useMemo(() => {
+        return recipients.filter((recipient) => {
+            const fullName = formatRecipientName(recipient.first_name, recipient.last_name, recipient.email);
+            return matchesSearchPattern(recipientSearchPattern, fullName, recipient.email);
+        });
+    }, [recipientSearchPattern, recipients]);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
 
     const selectedImportGroups = useMemo(
         () => groups.filter((group) => newGroup.importGroupIds.includes(group.id)),
@@ -68,28 +121,48 @@ export default function GroupsPage() {
     );
 
     const toggleRecipient = (recipientId: string) => {
+<<<<<<< HEAD
         if (importedRecipientIds.includes(recipientId) && !newGroup.recipientIds.includes(recipientId)) {
             return;
         }
         setNewGroup(prev => ({
+=======
+        setNewGroup((prev) => ({
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
             ...prev,
             recipientIds: prev.recipientIds.includes(recipientId)
-                ? prev.recipientIds.filter(id => id !== recipientId)
+                ? prev.recipientIds.filter((id) => id !== recipientId)
                 : [...prev.recipientIds, recipientId],
         }));
     };
 
+<<<<<<< HEAD
     const toggleImportGroup = (groupId: string) => {
         setNewGroup((prev) => ({
             ...prev,
             importGroupIds: prev.importGroupIds.includes(groupId)
                 ? prev.importGroupIds.filter((id) => id !== groupId)
                 : [...prev.importGroupIds, groupId],
+=======
+    const selectFilteredRecipients = () => {
+        setNewGroup((prev) => ({
+            ...prev,
+            recipientIds: mergeRecipientIds(
+                prev.recipientIds,
+                filteredRecipients.map((recipient) => recipient.id),
+            ),
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }));
     };
 
     const resetModal = () => {
+<<<<<<< HEAD
         setNewGroup({ name: '', description: '', recipientIds: [], importGroupIds: [] });
+=======
+        setNewGroup({ name: '', description: '', recipientIds: [] });
+        setRecipientSearch('');
+        setCsvSummary(null);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         setIsModalOpen(false);
     };
 
@@ -106,7 +179,11 @@ export default function GroupsPage() {
             resetModal();
             await fetchData();
         } catch (error: unknown) {
+<<<<<<< HEAD
             alert(error instanceof Error ? error.message : 'Failed to create static group');
+=======
+            alert(getErrorMessage(error, 'Failed to create static group'));
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         } finally {
             setIsSubmitting(false);
         }
@@ -116,9 +193,37 @@ export default function GroupsPage() {
         if (!confirm('Delete this static group? Campaigns already sent to it will keep their recipient snapshots.')) return;
         try {
             await api.groups.delete(groupId);
+<<<<<<< HEAD
             setGroups(prev => prev.filter(group => group.id !== groupId));
         } catch (error: unknown) {
             alert(error instanceof Error ? error.message : 'Failed to delete static group');
+=======
+            setGroups((prev) => prev.filter((group) => group.id !== groupId));
+        } catch (error: unknown) {
+            alert(getErrorMessage(error, 'Failed to delete static group'));
+        }
+    };
+
+    const handleCsvImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsImportingCsv(true);
+        try {
+            const result = await api.groups.importCSV(file);
+            setCsvSummary(result);
+            setNewGroup((prev) => ({
+                ...prev,
+                recipientIds: mergeRecipientIds(prev.recipientIds, result.matched_recipient_ids),
+            }));
+        } catch (error: unknown) {
+            alert(getErrorMessage(error, 'Failed to resolve CSV against recipients'));
+        } finally {
+            setIsImportingCsv(false);
+            if (csvInputRef.current) {
+                csvInputRef.current.value = '';
+            }
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
         }
     };
 
@@ -143,17 +248,23 @@ export default function GroupsPage() {
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                    <div className="relative max-w-md">
+                    <div className="relative max-w-2xl">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(event) => setSearchTerm(event.target.value)}
-                            placeholder="Search groups or recipient emails..."
+                            placeholder={`Search groups, recipient emails, or recipient names. ${REGEX_SEARCH_HINT}`}
                             className="block w-full rounded-xl border border-border bg-muted py-2.5 pl-11 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
                         />
                     </div>
                 </div>
+
+                {!groupSearchPattern.isValid && (
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                        Group search regex is invalid: {groupSearchPattern.error}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {isLoading ? (
@@ -166,7 +277,7 @@ export default function GroupsPage() {
                             <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">No static groups found</p>
                         </div>
                     ) : (
-                        filteredGroups.map(group => (
+                        filteredGroups.map((group) => (
                             <div key={group.id} className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/40 hover:shadow-xl">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
@@ -202,11 +313,11 @@ export default function GroupsPage() {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={resetModal}></div>
-                    <form onSubmit={handleCreateGroup} className="relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-3xl border border-border bg-card shadow-2xl">
+                    <form onSubmit={handleCreateGroup} className="relative flex max-h-[88vh] w-full max-w-3xl flex-col rounded-3xl border border-border bg-card shadow-2xl">
                         <div className="flex items-start justify-between border-b border-border p-6">
                             <div>
                                 <h2 className="text-xl font-black text-foreground">Create Static Group</h2>
-                                <p className="mt-1 text-sm text-muted-foreground">Pick recipients manually. Membership stays fixed until edited.</p>
+                                <p className="mt-1 text-sm text-muted-foreground">Pick recipients manually, with regex filtering, or from CSV. Membership stays fixed until edited.</p>
                             </div>
                             <button type="button" onClick={resetModal} className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground">
                                 <X className="h-5 w-5" />
@@ -219,7 +330,7 @@ export default function GroupsPage() {
                                 <input
                                     required
                                     value={newGroup.name}
-                                    onChange={(event) => setNewGroup(prev => ({ ...prev, name: event.target.value }))}
+                                    onChange={(event) => setNewGroup((prev) => ({ ...prev, name: event.target.value }))}
                                     className="mt-2 block w-full rounded-xl border border-border bg-muted px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20"
                                     placeholder="e.g. Placement Volunteers"
                                 />
@@ -228,11 +339,88 @@ export default function GroupsPage() {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</label>
                                 <textarea
                                     value={newGroup.description}
-                                    onChange={(event) => setNewGroup(prev => ({ ...prev, description: event.target.value }))}
+                                    onChange={(event) => setNewGroup((prev) => ({ ...prev, description: event.target.value }))}
                                     className="mt-2 block h-20 w-full resize-none rounded-xl border border-border bg-muted px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20"
                                     placeholder="Optional context for this group"
                                 />
                             </div>
+
+                            <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recipient Search</label>
+                                        <p className="mt-1 text-xs text-muted-foreground">Search on email or name, including regex with `/pattern/i`.</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={selectFilteredRecipients}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20"
+                                        >
+                                            <Wand2 className="h-3.5 w-3.5" />
+                                            Select Filtered
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewGroup((prev) => ({ ...prev, recipientIds: [] }))}
+                                            className="rounded-xl border border-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:bg-accent"
+                                        >
+                                            Clear Selection
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+                                    <div className="relative">
+                                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <input
+                                            type="text"
+                                            value={recipientSearch}
+                                            onChange={(event) => setRecipientSearch(event.target.value)}
+                                            placeholder={`Filter recipients by email or name. ${REGEX_SEARCH_HINT}`}
+                                            className="block w-full rounded-xl border border-border bg-background py-2.5 pl-11 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            ref={csvInputRef}
+                                            type="file"
+                                            accept=".csv"
+                                            className="hidden"
+                                            onChange={handleCsvImport}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => csvInputRef.current?.click()}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-foreground transition-colors hover:bg-accent"
+                                            disabled={isImportingCsv}
+                                        >
+                                            <Upload className="h-3.5 w-3.5" />
+                                            {isImportingCsv ? 'Resolving CSV...' : 'Import CSV'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    CSV columns supported: `email`, `full_name`, or `first_name` + `last_name`. Rows are matched against your existing recipients.
+                                </p>
+                                {!recipientSearchPattern.isValid && (
+                                    <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+                                        Recipient regex is invalid: {recipientSearchPattern.error}
+                                    </div>
+                                )}
+                                {csvSummary && (
+                                    <div className="mt-3 rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+                                        <div className="font-semibold text-foreground">
+                                            CSV matched {csvSummary.matched_count} recipients and skipped {csvSummary.skipped_count}.
+                                        </div>
+                                        {csvSummary.unmatched_rows.length > 0 && (
+                                            <div className="mt-2 max-h-24 overflow-y-auto text-xs text-amber-300">
+                                                {csvSummary.unmatched_rows.join(' | ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
                                 <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Import Existing Static Groups</label>
@@ -298,12 +486,20 @@ export default function GroupsPage() {
                                 <div className="mt-3 max-h-72 overflow-y-auto rounded-2xl border border-border">
                                     {recipients.length === 0 ? (
                                         <div className="p-6 text-center text-sm font-bold text-muted-foreground">No recipients available yet.</div>
+                                    ) : filteredRecipients.length === 0 ? (
+                                        <div className="p-6 text-center text-sm font-bold text-muted-foreground">No recipients matched the current search.</div>
                                     ) : (
+<<<<<<< HEAD
                                         recipients.map(recipient => {
                                             const selected = effectiveRecipientIds.includes(recipient.id);
                                             const imported = importedRecipientIds.includes(recipient.id);
                                             const direct = newGroup.recipientIds.includes(recipient.id);
                                             const fullName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || recipient.email;
+=======
+                                        filteredRecipients.map((recipient) => {
+                                            const selected = newGroup.recipientIds.includes(recipient.id);
+                                            const fullName = formatRecipientName(recipient.first_name, recipient.last_name, recipient.email);
+>>>>>>> be28eb5 (FEAT: Implemented the frontend for advanced filtering)
                                             return (
                                                 <button
                                                     key={recipient.id}

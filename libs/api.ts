@@ -172,6 +172,14 @@ export interface CampaignAnalyticsResponse {
     recipients: CampaignRecipientAnalytics[];
 }
 
+export interface GroupCsvImportResult {
+    matched_recipient_ids: string[];
+    matched_recipient_emails: string[];
+    matched_count: number;
+    skipped_count: number;
+    unmatched_rows: string[];
+}
+
 // Simple in-memory cache
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
@@ -444,6 +452,14 @@ export const groupAPI = {
     delete: async (id: string) => {
         return fetchAPI<any>(`/groups/${id}`, {
             method: 'DELETE',
+        });
+    },
+    importCSV: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return fetchAPI<GroupCsvImportResult>('/groups/import-csv', {
+            method: 'POST',
+            body: formData,
         });
     },
 };

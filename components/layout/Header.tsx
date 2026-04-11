@@ -1,11 +1,22 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Bell, Search, User, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { REGEX_SEARCH_HINT } from '@/libs/search';
+import { useQueryParamState } from '@/libs/useQueryParamState';
 
 export function Header() {
     const { logout, user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const pathname = usePathname();
+    const { value: searchValue, setValue: setSearchValue } = useQueryParamState('q');
+
+    const supportedSearch = useMemo(() => (
+        pathname?.startsWith('/recipients') ||
+        pathname?.startsWith('/groups') ||
+        pathname?.startsWith('/campaigns')
+    ), [pathname]);
 
     return (
         <header className="bg-card/50 backdrop-blur-md border-b border-border sticky top-0 z-30">
@@ -22,9 +33,15 @@ export function Header() {
                             <input
                                 id="search-field"
                                 className="block h-full w-full bg-transparent border-transparent py-2 pl-8 pr-3 text-foreground placeholder-muted-foreground focus:border-transparent focus:placeholder-foreground focus:outline-none focus:ring-0 sm:text-sm"
-                                placeholder="Search"
+                                placeholder={supportedSearch ? `Search this page. ${REGEX_SEARCH_HINT}` : "Search is available on recipients, groups, and campaigns"}
                                 type="search"
                                 name="search"
+                                value={searchValue}
+                                onChange={(event) => {
+                                    if (!supportedSearch) return;
+                                    setSearchValue(event.target.value);
+                                }}
+                                disabled={!supportedSearch}
                             />
                         </div>
                     </div>
