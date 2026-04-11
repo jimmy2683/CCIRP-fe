@@ -21,6 +21,7 @@ const fallbackCampaign = {
     created_at: new Date().toISOString(),
     subject: 'Campaign Subject',
     template_name: 'Template',
+    channels: ['email'],
 };
 
 const fallbackMetrics = {
@@ -57,15 +58,25 @@ const fallbackRecipients = [
 
 const FUNNEL_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#F43F5E', '#EF4444'];
 
+type CampaignAnalyticsHeader = {
+    name: string;
+    status: string;
+    created_at: string;
+    subject?: string;
+    template_name?: string;
+    channels?: string[];
+};
+
 export default function CampaignAnalyticsPage() {
     const params = useParams();
     const campaignId = params?.id as string;
 
     const [isLoading, setIsLoading] = useState(true);
-    const [campaign, setCampaign] = useState<any>(fallbackCampaign);
+    const [campaign, setCampaign] = useState<CampaignAnalyticsHeader>(fallbackCampaign);
     const [metrics, setMetrics] = useState(fallbackMetrics);
     const [timeline, setTimeline] = useState(fallbackTimeline);
     const [recipients, setRecipients] = useState(fallbackRecipients);
+    const [supportsOpenTracking, setSupportsOpenTracking] = useState(true);
 
     useEffect(() => {
         if (!campaignId) return;
@@ -76,11 +87,19 @@ export default function CampaignAnalyticsPage() {
                     api.campaigns.get(campaignId),
                     api.campaigns.getAnalytics(campaignId),
                 ]);
-                if (campaignData) setCampaign(campaignData);
+                if (campaignData) {
+                    setCampaign(campaignData);
+                    if (Array.isArray(campaignData.channels)) {
+                        setSupportsOpenTracking(campaignData.channels.every((channel: string) => channel === 'email'));
+                    }
+                }
                 if (analyticsData) {
                     if (analyticsData.metrics) setMetrics(analyticsData.metrics);
                     if (analyticsData.timeline) setTimeline(analyticsData.timeline);
                     if (analyticsData.recipients) setRecipients(analyticsData.recipients);
+                    if (typeof analyticsData.supports_open_tracking === 'boolean') {
+                        setSupportsOpenTracking(analyticsData.supports_open_tracking);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch campaign analytics, using fallback:', error);
@@ -94,9 +113,19 @@ export default function CampaignAnalyticsPage() {
     const funnelData = [
         { name: 'Sent', value: metrics.total_sent },
         { name: 'Delivered', value: metrics.delivered },
-        { name: 'Opened', value: metrics.opened },
+        ...(supportsOpenTracking ? [{ name: 'Opened', value: metrics.opened }] : []),
         { name: 'Clicked', value: metrics.clicked },
         { name: 'Bounced', value: metrics.bounced },
+    ];
+
+    const metricCards = [
+        { label: 'Total Sent', value: metrics.total_sent.toLocaleString(), icon: Send, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+        { label: 'Delivered', value: `${metrics.delivery_rate}%`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+        ...(supportsOpenTracking
+            ? [{ label: 'Opened', value: `${metrics.open_rate}%`, icon: Eye, color: 'text-blue-400', bg: 'bg-blue-500/10' }]
+            : []),
+        { label: 'Clicked', value: `${metrics.click_rate}%`, icon: MousePointerClick, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+        { label: 'Bounced', value: `${metrics.bounce_rate}%`, icon: AlertTriangle, color: 'text-rose-400', bg: 'bg-rose-500/10' },
     ];
 
     const getStatusColor = (status: string) => {
@@ -161,13 +190,7 @@ export default function CampaignAnalyticsPage() {
 
                 {/* Key Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {[
-                        { label: 'Total Sent', value: metrics.total_sent.toLocaleString(), icon: Send, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-                        { label: 'Delivered', value: `${metrics.delivery_rate}%`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                        { label: 'Opened', value: `${metrics.open_rate}%`, icon: Eye, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                        { label: 'Clicked', value: `${metrics.click_rate}%`, icon: MousePointerClick, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-                        { label: 'Bounced', value: `${metrics.bounce_rate}%`, icon: AlertTriangle, color: 'text-rose-400', bg: 'bg-rose-500/10' },
-                    ].map((m) => {
+                    {metricCards.map((m) => {
                         const Icon = m.icon;
                         return (
                             <div key={m.label} className="rounded-2xl border border-border bg-card shadow-sm p-4 flex flex-col items-center text-center gap-2">
@@ -220,7 +243,9 @@ export default function CampaignAnalyticsPage() {
                                     <Tooltip
                                         contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--foreground)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Line type="monotone" dataKey="opens" name="Opens" stroke="#6366F1" strokeWidth={3} dot={{ r: 4, fill: '#6366F1' }} activeDot={{ r: 6 }} />
+                                    {supportsOpenTracking && (
+                                        <Line type="monotone" dataKey="opens" name="Opens" stroke="#6366F1" strokeWidth={3} dot={{ r: 4, fill: '#6366F1' }} activeDot={{ r: 6 }} />
+                                    )}
                                     <Line type="monotone" dataKey="clicks" name="Clicks" stroke="#F43F5E" strokeWidth={3} dot={{ r: 4, fill: '#F43F5E' }} activeDot={{ r: 6 }} />
                                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 </LineChart>
@@ -241,7 +266,9 @@ export default function CampaignAnalyticsPage() {
                                 <tr>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Recipient</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Opened At</th>
+                                    {supportsOpenTracking && (
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Opened At</th>
+                                    )}
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wider">Clicked At</th>
                                 </tr>
                             </thead>
@@ -264,9 +291,11 @@ export default function CampaignAnalyticsPage() {
                                                 {r.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                            {r.opened_at ? new Date(r.opened_at).toLocaleString() : '—'}
-                                        </td>
+                                        {supportsOpenTracking && (
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                                                {r.opened_at ? new Date(r.opened_at).toLocaleString() : '—'}
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                             {r.clicked_at ? new Date(r.clicked_at).toLocaleString() : '—'}
                                         </td>

@@ -559,7 +559,6 @@ export default function GroupsPage() {
                                             )}
                                         </div>
                                     </div>
-
                                     <div>
                                         <div className="mb-3 flex items-center justify-between">
                                             <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Resolved Audience Preview</h3>

@@ -55,6 +55,14 @@ const STEPS = [
 ];
 
 const AUTO_FIELDS = new Set(['name', 'email', 'full_name', 'first_name', 'recipient_name', 'recipient_email']);
+const PREVIEW_AUTO_VALUES: Record<string, string> = {
+    name: 'Alex Morgan',
+    email: 'alex.morgan@example.com',
+    full_name: 'Alex Morgan',
+    first_name: 'Alex',
+    recipient_name: 'Alex Morgan',
+    recipient_email: 'alex.morgan@example.com',
+};
 
 const CHANNEL_OPTIONS: Array<{
     value: CampaignChannel;
@@ -72,6 +80,27 @@ function extractMergeFields(html: string): string[] {
     if (!matches) return [];
     const unique = new Set(matches.map(match => match.replace(/[{}\s]/g, '')));
     return Array.from(unique);
+}
+
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatFieldLabel(field: string): string {
+    return field.replace(/_/g, ' ').replace(/\b\w/g, value => value.toUpperCase());
+}
+
+function renderMergeFields(content: string, values: Record<string, string>): string {
+    let rendered = content;
+
+    for (const [key, value] of Object.entries(values)) {
+        rendered = rendered.replace(
+            new RegExp(`\\{\\{\\s*${escapeRegExp(key)}\\s*\\}\\}`, 'gi'),
+            value
+        );
+    }
+
+    return rendered;
 }
 
 export default function NewCampaignWizard() {
@@ -134,10 +163,39 @@ export default function NewCampaignWizard() {
         [templates, campaignData.templateId]
     );
 
-    const mergeFields = useMemo(() => {
+    const templateFields = useMemo(() => {
         if (!selectedTemplate) return [];
-        return extractMergeFields(selectedTemplate.body_html).filter(field => !AUTO_FIELDS.has(field));
+        return extractMergeFields(`${selectedTemplate.subject || ''} ${selectedTemplate.body_html}`);
     }, [selectedTemplate]);
+
+    const mergeFields = useMemo(() => {
+        return templateFields.filter(field => !AUTO_FIELDS.has(field));
+    }, [templateFields]);
+
+    const previewMergeValues = useMemo(() => {
+        const previewValues = { ...PREVIEW_AUTO_VALUES };
+
+        for (const field of templateFields) {
+            const enteredValue = campaignData.mergeData[field]?.trim();
+            previewValues[field] = enteredValue || `[${formatFieldLabel(field)}]`;
+        }
+
+        return previewValues;
+    }, [campaignData.mergeData, templateFields]);
+
+    const renderedTemplatePreview = useMemo(() => {
+        if (!selectedTemplate) {
+            return {
+                subject: 'No Subject',
+                body: '<div style="font-family: sans-serif; color: #64748b;">Select a template to preview it here.</div>',
+            };
+        }
+
+        return {
+            subject: renderMergeFields(selectedTemplate.subject || 'No Subject', previewMergeValues),
+            body: renderMergeFields(selectedTemplate.body_html, previewMergeValues),
+        };
+    }, [previewMergeValues, selectedTemplate]);
 
     const groupRecipients = useMemo(() => {
         const selectedGroupIds = new Set(campaignData.groupIds);
@@ -540,36 +598,85 @@ export default function NewCampaignWizard() {
                     )}
 
                     {currentStep === 3 && (
-                        <div className="max-w-2xl mx-auto space-y-6">
-                            <div>
-                                <h2 className="text-2xl font-bold text-foreground">Fill in Merge Fields</h2>
-                                <p className="text-muted-foreground">Recipient-specific fields are injected automatically during dispatch.</p>
+                        <div className="max-w-7xl mx-auto grid grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_40rem] xl:grid-cols-[minmax(0,1fr)_34rem] gap-8 items-start">
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-foreground">Fill in Merge Fields</h2>
+                                    <p className="text-muted-foreground">Recipient-specific fields are injected automatically during dispatch.</p>
+                                </div>
+                                {mergeFields.length === 0 ? (
+                                    <div className="text-center p-12 border border-dashed border-border rounded-2xl">
+                                        <Type className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
+                                        <p className="text-muted-foreground font-medium">This template has no custom merge fields.</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Recipient name and email will be filled automatically. Click Continue.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {mergeFields.map(field => (
+                                            <div key={field}>
+                                                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                                    {formatFieldLabel(field)}
+                                                    <span className="text-xs text-primary ml-2 font-mono">{`{{${field}}}`}</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground"
+                                                    placeholder={`Enter value for ${formatFieldLabel(field)}`}
+                                                    value={campaignData.mergeData[field] || ''}
+                                                    onChange={(e) => updateMergeField(field, e.target.value)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            {mergeFields.length === 0 ? (
-                                <div className="text-center p-12 border border-dashed border-border rounded-2xl">
-                                    <Type className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-                                    <p className="text-muted-foreground font-medium">This template has no custom merge fields.</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Recipient name and email will be filled automatically. Click Continue.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {mergeFields.map(field => (
-                                        <div key={field}>
-                                            <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                                {field.replace(/_/g, ' ').replace(/\b\w/g, value => value.toUpperCase())}
-                                                <span className="text-xs text-primary ml-2 font-mono">{`{{${field}}}`}</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground"
-                                                placeholder={`Enter value for ${field}`}
-                                                value={campaignData.mergeData[field] || ''}
-                                                onChange={(e) => updateMergeField(field, e.target.value)}
-                                            />
+
+                            <aside className="xl:sticky xl:top-6">
+                                <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                                    <div className="px-5 py-4 border-b border-border bg-accent/20">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Template Preview</p>
+                                        <div className="mt-2 flex items-center justify-between gap-3">
+                                            <div>
+                                                <h3 className="text-base font-black text-foreground">{selectedTemplate?.name || 'No template selected'}</h3>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    Live preview with current merge values. Empty fields stay as placeholders.
+                                                </p>
+                                            </div>
+                                            {selectedTemplate && (
+                                                <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-foreground">
+                                                    {selectedTemplate.channel}
+                                                </span>
+                                            )}
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    <div className="px-5 py-4 border-b border-border">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject</p>
+                                        <p className="mt-2 text-base font-semibold leading-7 text-foreground break-words">
+                                            {renderedTemplatePreview.subject || '(No Subject)'}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 bg-muted/40">
+                                        <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-inner">
+                                            <div className="px-4 py-3 border-b border-border bg-accent/20 flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500/40" />
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40" />
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40" />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Preview Canvas</span>
+                                            </div>
+                                            <div className="max-h-[42rem] min-h-[32rem] overflow-auto bg-white p-8 sm:p-10">
+                                                <div
+                                                    className="mx-auto w-full max-w-[40rem] text-[15px] leading-7 text-slate-900 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h3]:text-xl [&_h3]:font-semibold [&_p]:my-4 [&_li]:my-2 [&_a]:text-sky-700 [&_a]:underline [&_img]:max-w-full"
+                                                    dangerouslySetInnerHTML={{ __html: renderedTemplatePreview.body }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
+                            </aside>
                         </div>
                     )}
 

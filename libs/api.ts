@@ -218,6 +218,7 @@ export interface CampaignRecipientAnalytics {
 }
 
 export interface CampaignAnalyticsResponse {
+    supports_open_tracking: boolean;
     metrics: {
         total_sent: number;
         delivered: number;
