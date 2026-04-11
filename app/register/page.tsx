@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 import { api } from "@/libs/api";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import Link from "next/link";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,12 +23,12 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      await api.auth.register({ email, password, full_name: fullName });
+      await api.auth.register({ email, password, full_name: fullName, phone });
       // Clear error and proceed to auto-login
-      const { access_token } = await api.auth.login({ email, password });
-      login(access_token);
-    } catch (err: any) {
-      setError(err.message || "Failed to register or log in");
+      const { access_token, refresh_token } = await api.auth.login({ email, password });
+      login(access_token, refresh_token);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to register or log in");
     }
   };
 
@@ -55,6 +54,16 @@ export default function RegisterPage() {
               className="w-full bg-muted border border-border rounded-xl p-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required />
+          </div>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-1">Phone Number</label>
+            <input
+              type="tel"
+              className="w-full bg-muted border border-border rounded-xl p-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+919999999999"
               required />
           </div>
           <div className="grid grid-cols-2 gap-4">

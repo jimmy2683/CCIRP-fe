@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export type CampaignChannel = 'email' | 'sms' | 'whatsapp';
+
 // CCIRP Template Types
 export interface Template {
     _id: string;
@@ -31,6 +33,7 @@ export interface UserProfileData {
     id: string;
     email: string;
     full_name: string;
+    phone?: string | null;
     role: string;
     is_active: boolean;
 }
@@ -71,7 +74,7 @@ export interface Recipient {
 
 export interface RecipientCreate {
     email: string;
-    phone?: string;
+    phone: string;
     first_name: string;
     last_name?: string;
     attributes?: Record<string, any>;
@@ -83,12 +86,35 @@ export interface RecipientUpdate extends Partial<RecipientCreate> {
     status?: string;
 }
 
+export interface StaticGroup {
+    id: string;
+    name: string;
+    description: string | null;
+    type: 'static';
+    recipient_ids: string[];
+    recipient_emails: string[];
+    recipient_count: number;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface StaticGroupCreatePayload {
+    name: string;
+    description?: string | null;
+    recipient_ids?: string[];
+    import_group_ids?: string[];
+}
+
+export interface StaticGroupUpdatePayload extends Partial<StaticGroupCreatePayload> {}
+
 export interface Campaign {
     id: string;
     _id?: string;
     name: string;
     subject: string;
     template_id: string;
+    channels: CampaignChannel[];
     tags: string[];
     group_ids?: string[];
     status: string;
@@ -97,6 +123,18 @@ export interface Campaign {
     scheduled_at?: string | null;
     created_by: string;
     created_at: string;
+}
+
+export interface CampaignCreatePayload {
+    name: string;
+    subject: string;
+    template_id: string;
+    channels: CampaignChannel[];
+    tags?: string[];
+    group_ids?: string[];
+    recipients?: string[];
+    merge_data?: Record<string, string>;
+    scheduled_at?: string | null;
 }
 
 export interface CampaignRecipientAnalytics {
@@ -300,7 +338,7 @@ export const campaignAPI = {
     get: async (id: string) => {
         return fetchAPI<Campaign>(`/campaigns/${id}`);
     },
-    create: async (data: any) => {
+    create: async (data: CampaignCreatePayload) => {
         return fetchAPI<Campaign>('/campaigns/', {
             method: 'POST',
             body: JSON.stringify(data),
@@ -336,7 +374,7 @@ export const settingsAPI = {
     getProfile: async () => {
         return authAPI.getProfile();
     },
-    updateProfile: async (data: { full_name?: string }) => {
+    updateProfile: async (data: { full_name?: string; phone?: string }) => {
         return fetchAPI<any>('/auth/me', {
             method: 'PUT',
             body: JSON.stringify(data),
@@ -386,19 +424,19 @@ export const recipientAPI = {
 
 export const groupAPI = {
     list: async () => {
-        return fetchAPI<any[]>('/groups/');
+        return fetchAPI<StaticGroup[]>('/groups/');
     },
     get: async (id: string) => {
-        return fetchAPI<any>(`/groups/${id}`);
+        return fetchAPI<StaticGroup>(`/groups/${id}`);
     },
-    create: async (data: any) => {
-        return fetchAPI<any>('/groups/', {
+    create: async (data: StaticGroupCreatePayload) => {
+        return fetchAPI<StaticGroup>('/groups/', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     },
-    update: async (id: string, data: any) => {
-        return fetchAPI<any>(`/groups/${id}`, {
+    update: async (id: string, data: StaticGroupUpdatePayload) => {
+        return fetchAPI<StaticGroup>(`/groups/${id}`, {
             method: 'PUT',
             body: JSON.stringify(data),
         });

@@ -3,16 +3,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Check, Plus, Search, Trash2, Users, X } from 'lucide-react';
-import { api } from '@/libs/api';
+import { api, Recipient, StaticGroup } from '@/libs/api';
+
+function dedupeStrings(values: string[]) {
+    return Array.from(new Set(values.filter(Boolean)));
+}
 
 export default function GroupsPage() {
-    const [groups, setGroups] = useState<any[]>([]);
-    const [recipients, setRecipients] = useState<any[]>([]);
+    const [groups, setGroups] = useState<StaticGroup[]>([]);
+    const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [newGroup, setNewGroup] = useState({ name: '', description: '', recipientIds: [] as string[] });
+    const [newGroup, setNewGroup] = useState({
+        name: '',
+        description: '',
+        recipientIds: [] as string[],
+        importGroupIds: [] as string[],
+    });
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -39,11 +48,29 @@ export default function GroupsPage() {
         return groups.filter(group =>
             group.name?.toLowerCase().includes(q) ||
             group.description?.toLowerCase().includes(q) ||
-            group.recipient_emails?.some((email: string) => email.toLowerCase().includes(q))
+            group.recipient_emails?.some((email) => email.toLowerCase().includes(q))
         );
     }, [groups, searchTerm]);
 
+    const selectedImportGroups = useMemo(
+        () => groups.filter((group) => newGroup.importGroupIds.includes(group.id)),
+        [groups, newGroup.importGroupIds],
+    );
+
+    const importedRecipientIds = useMemo(
+        () => dedupeStrings(selectedImportGroups.flatMap((group) => group.recipient_ids || [])),
+        [selectedImportGroups],
+    );
+
+    const effectiveRecipientIds = useMemo(
+        () => dedupeStrings([...importedRecipientIds, ...newGroup.recipientIds]),
+        [importedRecipientIds, newGroup.recipientIds],
+    );
+
     const toggleRecipient = (recipientId: string) => {
+        if (importedRecipientIds.includes(recipientId) && !newGroup.recipientIds.includes(recipientId)) {
+            return;
+        }
         setNewGroup(prev => ({
             ...prev,
             recipientIds: prev.recipientIds.includes(recipientId)
@@ -52,8 +79,17 @@ export default function GroupsPage() {
         }));
     };
 
+    const toggleImportGroup = (groupId: string) => {
+        setNewGroup((prev) => ({
+            ...prev,
+            importGroupIds: prev.importGroupIds.includes(groupId)
+                ? prev.importGroupIds.filter((id) => id !== groupId)
+                : [...prev.importGroupIds, groupId],
+        }));
+    };
+
     const resetModal = () => {
-        setNewGroup({ name: '', description: '', recipientIds: [] });
+        setNewGroup({ name: '', description: '', recipientIds: [], importGroupIds: [] });
         setIsModalOpen(false);
     };
 
@@ -65,11 +101,12 @@ export default function GroupsPage() {
                 name: newGroup.name,
                 description: newGroup.description || null,
                 recipient_ids: newGroup.recipientIds,
+                import_group_ids: newGroup.importGroupIds,
             });
             resetModal();
             await fetchData();
-        } catch (error: any) {
-            alert(error.message || 'Failed to create static group');
+        } catch (error: unknown) {
+            alert(error instanceof Error ? error.message : 'Failed to create static group');
         } finally {
             setIsSubmitting(false);
         }
@@ -80,8 +117,8 @@ export default function GroupsPage() {
         try {
             await api.groups.delete(groupId);
             setGroups(prev => prev.filter(group => group.id !== groupId));
-        } catch (error: any) {
-            alert(error.message || 'Failed to delete static group');
+        } catch (error: unknown) {
+            alert(error instanceof Error ? error.message : 'Failed to delete static group');
         }
     };
 
@@ -150,7 +187,7 @@ export default function GroupsPage() {
                                     <span className="text-sm font-bold text-foreground">{group.recipient_count} recipients</span>
                                 </div>
                                 <div className="mt-4 flex max-h-24 flex-wrap gap-2 overflow-y-auto">
-                                    {(group.recipient_emails || []).map((email: string) => (
+                                    {(group.recipient_emails || []).map((email) => (
                                         <span key={email} className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">
                                             {email}
                                         </span>
@@ -198,28 +235,95 @@ export default function GroupsPage() {
                             </div>
                             <div>
                                 <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Import Existing Static Groups</label>
+                                    <span className="text-xs font-bold text-primary">{newGroup.importGroupIds.length} selected</span>
+                                </div>
+                                <div className="mt-3 max-h-52 overflow-y-auto rounded-2xl border border-border">
+                                    {groups.length === 0 ? (
+                                        <div className="p-6 text-center text-sm font-bold text-muted-foreground">Create a group first to reuse it here.</div>
+                                    ) : (
+                                        groups.map((group) => {
+                                            const selected = newGroup.importGroupIds.includes(group.id);
+                                            return (
+                                                <button
+                                                    key={group.id}
+                                                    type="button"
+                                                    onClick={() => toggleImportGroup(group.id)}
+                                                    className="flex w-full items-center justify-between border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-accent/40"
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-bold text-foreground">{group.name}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {group.recipient_count} recipients
+                                                            {group.description ? ` • ${group.description}` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'}`}>
+                                                        {selected && <Check className="h-3.5 w-3.5" />}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                                {selectedImportGroups.length > 0 && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {selectedImportGroups.map((group) => (
+                                            <span key={group.id} className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">
+                                                {group.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Audience Summary</p>
+                                        <p className="mt-1 text-sm font-bold text-foreground">
+                                            {effectiveRecipientIds.length} unique recipients will be saved in this static group
+                                        </p>
+                                    </div>
+                                    <div className="text-right text-xs font-bold text-muted-foreground">
+                                        <p>{newGroup.recipientIds.length} direct picks</p>
+                                        <p>{importedRecipientIds.length} imported from groups</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recipients</label>
-                                    <span className="text-xs font-bold text-primary">{newGroup.recipientIds.length} selected</span>
+                                    <span className="text-xs font-bold text-primary">{effectiveRecipientIds.length} total included</span>
                                 </div>
                                 <div className="mt-3 max-h-72 overflow-y-auto rounded-2xl border border-border">
                                     {recipients.length === 0 ? (
                                         <div className="p-6 text-center text-sm font-bold text-muted-foreground">No recipients available yet.</div>
                                     ) : (
                                         recipients.map(recipient => {
-                                            const selected = newGroup.recipientIds.includes(recipient.id);
+                                            const selected = effectiveRecipientIds.includes(recipient.id);
+                                            const imported = importedRecipientIds.includes(recipient.id);
+                                            const direct = newGroup.recipientIds.includes(recipient.id);
                                             const fullName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || recipient.email;
                                             return (
                                                 <button
                                                     key={recipient.id}
                                                     type="button"
                                                     onClick={() => toggleRecipient(recipient.id)}
-                                                    className="flex w-full items-center justify-between border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-accent/40"
+                                                    disabled={imported && !direct}
+                                                    className={`flex w-full items-center justify-between border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 ${
+                                                        imported && !direct ? 'cursor-not-allowed bg-primary/5' : 'hover:bg-accent/40'
+                                                    }`}
                                                 >
                                                     <div>
                                                         <p className="text-sm font-bold text-foreground">{fullName}</p>
-                                                        <p className="text-xs text-muted-foreground">{recipient.email}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {recipient.email}
+                                                            {imported && !direct ? ' • Included via imported group' : direct ? ' • Added directly' : ''}
+                                                        </p>
                                                     </div>
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg border ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'}`}>
+                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg border ${
+                                                        selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted'
+                                                    }`}>
                                                         {selected && <Check className="h-3.5 w-3.5" />}
                                                     </span>
                                                 </button>

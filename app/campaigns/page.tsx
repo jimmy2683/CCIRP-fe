@@ -4,19 +4,25 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Plus, Search, Calendar, Users, Send, MoreVertical, Copy, RotateCcw, Loader2, BarChart3 } from 'lucide-react';
-import { api } from '@/libs/api';
+import { api, Campaign } from '@/libs/api';
 
-const mockCampaigns = [
-    { id: 1, name: 'Q1 Product Update', status: 'Sent', sentCount: 1250, openRate: '45%', date: '2026-03-01' },
-    { id: 2, name: 'Enterprise Webinar Invite', status: 'Scheduled', sentCount: 850, openRate: '-', date: '2026-03-15' },
-    { id: 3, name: 'Welcome Series - Day 1', status: 'Active', sentCount: 342, openRate: '68%', date: 'Ongoing' },
-    { id: 4, name: 'Inactive User Re-engagement', status: 'Draft', sentCount: 0, openRate: '-', date: '-' },
-    { id: 5, name: 'Holiday Promotion 2025', status: 'Sent', sentCount: 4500, openRate: '22%', date: '2025-12-20' },
-];
+const STATUS_STYLES: Record<string, string> = {
+    sent: 'bg-emerald-500/10 text-emerald-400',
+    partially_sent: 'bg-amber-500/10 text-amber-400',
+    scheduled: 'bg-primary/10 text-primary',
+    queued: 'bg-sky-500/10 text-sky-400',
+    dispatching: 'bg-orange-500/10 text-orange-400',
+    failed: 'bg-rose-500/10 text-rose-400',
+    draft: 'bg-muted text-muted-foreground',
+};
+
+function formatStatus(status: string) {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
 
 export default function CampaignsPage() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -71,14 +77,14 @@ export default function CampaignsPage() {
                         <div className="p-3 bg-primary/10 text-primary rounded-xl"><Calendar className="w-5 h-5" /></div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-                            <p className="text-2xl font-bold text-foreground">{campaigns.filter((c: any) => c.status === 'Scheduled').length}</p>
+                            <p className="text-2xl font-bold text-foreground">{campaigns.filter((c) => c.status === 'scheduled').length}</p>
                         </div>
                     </div>
                     <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><Users className="w-5 h-5" /></div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Total Recipients</p>
-                            <p className="text-2xl font-bold text-foreground">{campaigns.reduce((sum: number, c: any) => sum + (c.recipients?.length || 0), 0)}</p>
+                            <p className="text-2xl font-bold text-foreground">{campaigns.reduce((sum, c) => sum + (c.recipients?.length || 0), 0)}</p>
                         </div>
                     </div>
                 </div>
@@ -135,16 +141,28 @@ export default function CampaignsPage() {
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-foreground">{c.name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
-                                                    ${c.status === 'Sent' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                        c.status === 'Draft' ? 'bg-muted text-muted-foreground' :
-                                                            'bg-primary/10 text-primary'}`
+                                                    ${STATUS_STYLES[c.status] || 'bg-muted text-muted-foreground'}`
                                                 }>
-                                                    {c.status}
+                                                    {formatStatus(c.status)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">{c.recipients?.length || 0}</td>
+                                            <td className="px-6 py-4 text-muted-foreground">
+                                                <div className="flex flex-col gap-1">
+                                                    <span>{c.recipients?.length || 0}</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(c.channels || ['email']).map((channel) => (
+                                                            <span
+                                                                key={channel}
+                                                                className="inline-flex rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
+                                                            >
+                                                                {channel}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                                                {c.scheduled_at ? new Date(c.scheduled_at).toLocaleDateString() : 'Immediate'}
+                                                {c.scheduled_at ? new Date(c.scheduled_at).toLocaleString() : 'Immediate'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
                                                 {new Date(c.created_at).toLocaleDateString()}

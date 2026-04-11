@@ -4,12 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, Upload, X } from 'lucide-react';
-import { api } from '@/libs/api';
+import { api, Recipient } from '@/libs/api';
 
 export default function RecipientsPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
-    const [recipients, setRecipients] = useState<any[]>([]);
+    const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isImporting, setIsImporting] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -46,8 +46,8 @@ export default function RecipientsPage() {
             const response = await api.recipients.importCSV(file);
             alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
             fetchRecipients();
-        } catch (err: any) {
-            alert(`Import failed: ${err.message}`);
+        } catch (err: unknown) {
+            alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -66,8 +66,8 @@ export default function RecipientsPage() {
             setNewRecipientData({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
             setIsAddModalOpen(false);
             fetchRecipients();
-        } catch (err: any) {
-            alert(`Failed to add: ${err.message}`);
+        } catch (err: unknown) {
+            alert(`Failed to add: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -86,8 +86,8 @@ export default function RecipientsPage() {
         try {
             await api.recipients.delete(id);
             setRecipients(recipients.filter(r => r.id !== id));
-        } catch (err: any) {
-            alert(`Failed to delete: ${err.message}`);
+        } catch (err: unknown) {
+            alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
     };
 
@@ -316,9 +316,10 @@ export default function RecipientsPage() {
                                     value={newRecipientData.email} onChange={e => setNewRecipientData({ ...newRecipientData, email: e.target.value })} />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Phone Number (Optional)</label>
-                                <input type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Phone Number</label>
+                                <input required type="text" className="rounded-xl bg-muted border-border border py-2.5 px-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                     value={newRecipientData.phone} onChange={e => setNewRecipientData({ ...newRecipientData, phone: e.target.value })} />
+                                <p className="text-[11px] text-muted-foreground">Recipients without phone numbers are not accepted.</p>
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Segments (comma separated)</label>

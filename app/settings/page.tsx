@@ -20,6 +20,7 @@ export default function SettingsPage() {
     const [profile, setProfile] = useState({
         full_name: '',
         email: '',
+        phone: '',
         role: '',
         is_active: true,
         created_at: '',
@@ -50,6 +51,7 @@ export default function SettingsPage() {
                     setProfile({
                         full_name: data.full_name || '',
                         email: data.email || '',
+                        phone: data.phone || '',
                         role: data.role || 'user',
                         is_active: data.is_active ?? true,
                         created_at: data.created_at || '',
@@ -71,12 +73,20 @@ export default function SettingsPage() {
     };
 
     const handleSaveProfile = async () => {
+        if (!profile.full_name.trim()) {
+            showMessage('error', 'Full name is required.');
+            return;
+        }
+        if (!profile.phone.trim()) {
+            showMessage('error', 'Phone number is required.');
+            return;
+        }
         setIsSaving(true);
         try {
-            await api.settings.updateProfile({ full_name: profile.full_name });
+            await api.settings.updateProfile({ full_name: profile.full_name, phone: profile.phone });
             showMessage('success', 'Profile updated successfully.');
-        } catch (error: any) {
-            showMessage('error', error.message || 'Failed to update profile.');
+        } catch (error: unknown) {
+            showMessage('error', error instanceof Error ? error.message : 'Failed to update profile.');
         } finally {
             setIsSaving(false);
         }
@@ -99,8 +109,8 @@ export default function SettingsPage() {
             });
             showMessage('success', 'Password changed successfully.');
             setPasswords({ current: '', newPass: '', confirm: '' });
-        } catch (error: any) {
-            showMessage('error', error.message || 'Failed to change password.');
+        } catch (error: unknown) {
+            showMessage('error', error instanceof Error ? error.message : 'Failed to change password.');
         } finally {
             setIsSaving(false);
         }
@@ -251,6 +261,17 @@ export default function SettingsPage() {
                                                 className="w-full rounded-xl border border-border bg-muted/50 p-3 text-muted-foreground text-sm cursor-not-allowed"
                                             />
                                             <p className="text-[11px] text-muted-foreground mt-1">Email cannot be changed.</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Phone Number</label>
+                                            <input
+                                                type="tel"
+                                                value={profile.phone}
+                                                onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                                                className="w-full rounded-xl border border-border bg-background p-3 text-foreground text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none"
+                                                placeholder="+919999999999"
+                                            />
+                                            <p className="text-[11px] text-muted-foreground mt-1">Phone is required for SMS, WhatsApp, and recipient sync.</p>
                                         </div>
                                     </div>
 

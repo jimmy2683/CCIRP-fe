@@ -14,10 +14,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { access_token } = await api.auth.login({ email, password });
-      login(access_token);
-    } catch (err: any) {
-      setError(err.message || "Failed to log in");
+      const { access_token, refresh_token } = await api.auth.login({ email, password });
+      login(access_token, refresh_token);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to log in");
     }
   };
 
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don't have an account? <Link href="/register" className="text-primary hover:underline">Create one</Link>
+          Don&apos;t have an account? <Link href="/register" className="text-primary hover:underline">Create one</Link>
         </p>
       </div>
     </div>

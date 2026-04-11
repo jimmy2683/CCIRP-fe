@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { api } from "@/libs/api";
@@ -9,6 +9,7 @@ interface User {
   id: string;
   email: string;
   full_name: string;
+  phone?: string | null;
   role: string;
 }
 
@@ -16,7 +17,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string) => void;
+  login: (accessToken: string, refreshToken?: string | null) => void;
   logout: () => void;
 }
 
@@ -39,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         throw new Error("Empty profile received");
       }
-    } catch (error: any) {
-      console.error("Auth: Failed to fetch profile.", error.message);
+    } catch (error: unknown) {
+      console.error("Auth: Failed to fetch profile.", error instanceof Error ? error.message : error);
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       setUser(null);
@@ -73,8 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, pathname, isLoading, isMounted, router]);
 
-  const login = async (token: string) => {
-    localStorage.setItem("access_token", token);
+  const login = async (accessToken: string, refreshToken?: string | null) => {
+    localStorage.setItem("access_token", accessToken);
+    if (refreshToken) {
+      localStorage.setItem("refresh_token", refreshToken);
+    }
     setIsLoading(true);
     await fetchProfile();
     router.push("/");
@@ -87,13 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  const value = useMemo(() => ({
+  const value = {
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
-  }), [user, isLoading]);
+  };
 
   // Handle Hydration and Loading States without unmounting the Provider context
   return (
