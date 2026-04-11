@@ -83,6 +83,57 @@ export interface RecipientUpdate extends Partial<RecipientCreate> {
     status?: string;
 }
 
+export interface Campaign {
+    id: string;
+    _id?: string;
+    name: string;
+    subject: string;
+    template_id: string;
+    tags: string[];
+    group_ids?: string[];
+    status: string;
+    recipients: string[];
+    merge_data: Record<string, string>;
+    scheduled_at?: string | null;
+    created_by: string;
+    created_at: string;
+}
+
+export interface CampaignRecipientAnalytics {
+    email: string;
+    name: string;
+    status: string;
+    delivery_status: string;
+    open_count: number;
+    click_count: number;
+    unique_open_count: number;
+    unique_click_count: number;
+    opened_at: string | null;
+    clicked_at: string | null;
+}
+
+export interface CampaignAnalyticsResponse {
+    metrics: {
+        total_sent: number;
+        delivered: number;
+        opened: number;
+        clicked: number;
+        total_opens: number;
+        total_clicks: number;
+        bounced: number;
+        delivery_rate: number;
+        open_rate: number;
+        click_rate: number;
+        bounce_rate: number;
+    };
+    timeline: Array<{
+        time: string;
+        opens: number;
+        clicks: number;
+    }>;
+    recipients: CampaignRecipientAnalytics[];
+}
+
 // Simple in-memory cache
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
@@ -244,19 +295,19 @@ export const templateAPI = {
 
 export const campaignAPI = {
     list: async () => {
-        return fetchAPI<any[]>('/campaigns/');
+        return fetchAPI<Campaign[]>('/campaigns/');
     },
     get: async (id: string) => {
-        return fetchAPI<any>(`/campaigns/${id}`);
+        return fetchAPI<Campaign>(`/campaigns/${id}`);
     },
     create: async (data: any) => {
-        return fetchAPI<any>('/campaigns/', {
+        return fetchAPI<Campaign>('/campaigns/', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     },
     getAnalytics: async (id: string) => {
-        return fetchAPI<any>(`/campaigns/${id}/analytics`, {
+        return fetchAPI<CampaignAnalyticsResponse>(`/campaigns/${id}/analytics`, {
             cacheTTL: DEFAULT_CACHE_TTL,
         });
     },
