@@ -1,5 +1,12 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    skip: number;
+    limit: number;
+}
+
 export type CampaignChannel = 'email' | 'sms' | 'whatsapp';
 
 // CCIRP Template Types
@@ -107,7 +114,7 @@ export interface StaticGroupCreatePayload {
     import_group_ids?: string[];
 }
 
-export interface StaticGroupUpdatePayload extends Partial<StaticGroupCreatePayload> {}
+export interface StaticGroupUpdatePayload extends Partial<StaticGroupCreatePayload> { }
 
 export interface DynamicGroupPreference {
     id: string;
@@ -360,9 +367,12 @@ export const authAPI = {
 };
 
 export const templateAPI = {
-    list: async (type?: string) => {
-        const query = type ? `?type=${type}` : '';
-        return fetchAPI<Template[]>(`/templates${query}`);
+    list: async (type?: string, skip: number = 0, limit: number = 100) => {
+        const query = new URLSearchParams();
+        if (type) query.append('type', type);
+        query.append('skip', skip.toString());
+        query.append('limit', limit.toString());
+        return fetchAPI<PaginatedResponse<Template>>(`/templates?${query.toString()}`);
     },
     get: async (id: string) => {
         return fetchAPI<Template>(`/templates/${id}`);
@@ -410,8 +420,8 @@ export const templateAPI = {
 };
 
 export const campaignAPI = {
-    list: async () => {
-        return fetchAPI<Campaign[]>('/campaigns/');
+    list: async (skip: number = 0, limit: number = 100) => {
+        return fetchAPI<PaginatedResponse<Campaign>>(`/campaigns/?skip=${skip}&limit=${limit}`);
     },
     get: async (id: string) => {
         return fetchAPI<Campaign>(`/campaigns/${id}`);
@@ -430,8 +440,8 @@ export const campaignAPI = {
 };
 
 export const userAPI = {
-    list: async () => {
-        return fetchAPI<UserProfileData[]>('/users/');
+    list: async (skip: number = 0, limit: number = 100) => {
+        return fetchAPI<PaginatedResponse<UserProfileData>>(`/users/?skip=${skip}&limit=${limit}`);
     }
 };
 
@@ -467,8 +477,8 @@ export const settingsAPI = {
 };
 
 export const recipientAPI = {
-    list: async () => {
-        return fetchAPI<Recipient[]>('/recipients/');
+    list: async (skip: number = 0, limit: number = 100) => {
+        return fetchAPI<PaginatedResponse<Recipient>>(`/recipients/?skip=${skip}&limit=${limit}`);
     },
     get: async (id: string) => {
         return fetchAPI<Recipient>(`/recipients/${id}`);
@@ -493,7 +503,7 @@ export const recipientAPI = {
     importCSV: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
-        return fetchAPI<{success: number, skipped: number, errors: string[]}>('/recipients/bulk-import', {
+        return fetchAPI<{ success: number, skipped: number, errors: string[] }>('/recipients/bulk-import', {
             method: 'POST',
             body: formData,
         });
@@ -501,8 +511,8 @@ export const recipientAPI = {
 };
 
 export const groupAPI = {
-    list: async () => {
-        return fetchAPI<StaticGroup[]>('/groups/');
+    list: async (skip: number = 0, limit: number = 100) => {
+        return fetchAPI<PaginatedResponse<StaticGroup>>(`/groups/?skip=${skip}&limit=${limit}`);
     },
     get: async (id: string) => {
         return fetchAPI<StaticGroup>(`/groups/${id}`);

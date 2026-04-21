@@ -16,7 +16,7 @@ export default function TemplatesPage() {
             setIsLoading(true);
             try {
                 const data = await api.templates.list(activeTab);
-                setTemplates(data || []);
+                setTemplates(data?.items || []);
             } catch (error) {
                 console.error('Failed to fetch templates:', error);
                 setTemplates([]);
@@ -87,7 +87,7 @@ export default function TemplatesPage() {
                                 {activeTab === 'custom' ? 'No custom templates yet' : 'No general templates available'}
                             </h3>
                             <p className="mt-2 text-sm max-w-xs">
-                                {activeTab === 'custom' 
+                                {activeTab === 'custom'
                                     ? 'Create your first custom template using our drag-and-drop editor.'
                                     : 'Please check back later or contact an administrator.'}
                             </p>

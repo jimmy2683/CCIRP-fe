@@ -27,7 +27,7 @@ export default function RecipientsPage() {
         setIsLoading(true);
         try {
             const data = await api.recipients.list();
-            setRecipients(data);
+            setRecipients(data?.items || []);
         } catch (err) {
             console.error("Failed to load recipients", err);
         } finally {
@@ -206,7 +206,7 @@ export default function RecipientsPage() {
                                     filteredRecipients.map((recipient) => {
                                         const fullName = `${recipient.first_name} ${recipient.last_name || ''}`.trim();
                                         const lastEngaged = recipient.engagement?.last_open_at || recipient.engagement?.last_click_at
-                                            ? new Date(recipient.engagement.last_open_at || recipient.engagement.last_click_at).toLocaleDateString()
+                                            ? new Date((recipient.engagement.last_open_at || recipient.engagement.last_click_at) as string).toLocaleDateString()
                                             : 'Never';
 
                                         return (

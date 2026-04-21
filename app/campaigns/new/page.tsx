@@ -70,10 +70,10 @@ const CHANNEL_OPTIONS: Array<{
     description: string;
     icon: React.ElementType;
 }> = [
-    { value: 'email', label: 'Email', description: 'HTML message with tracking support', icon: Mail },
-    { value: 'sms', label: 'SMS', description: 'Plain text message to phone numbers', icon: Phone },
-    { value: 'whatsapp', label: 'WhatsApp', description: 'Plain text WhatsApp delivery', icon: MessageSquare },
-];
+        { value: 'email', label: 'Email', description: 'HTML message with tracking support', icon: Mail },
+        { value: 'sms', label: 'SMS', description: 'Plain text message to phone numbers', icon: Phone },
+        { value: 'whatsapp', label: 'WhatsApp', description: 'Plain text WhatsApp delivery', icon: MessageSquare },
+    ];
 
 function extractMergeFields(html: string): string[] {
     const matches = html.match(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g);
@@ -143,10 +143,10 @@ export default function NewCampaignWizard() {
                     api.groups.list(),
                     api.groups.listDynamicPreferences(),
                 ]);
-                setTemplates(templateList || []);
-                setUsers((userList || []).filter(user => !!user.phone));
-                setRecipients(recipientList || []);
-                setGroups(groupList || []);
+                setTemplates(templateList?.items || []);
+                setUsers((userList?.items || []).filter(user => !!user.phone));
+                setRecipients(recipientList?.items || []);
+                setGroups(groupList?.items || []);
                 setDynamicPreferences(dynamicPreferenceList || []);
             } catch (error) {
                 console.error('Failed to fetch wizard data:', error);

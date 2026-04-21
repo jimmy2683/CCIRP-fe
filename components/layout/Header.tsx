@@ -1,51 +1,18 @@
 "use client"
 import React, { useMemo, useState } from 'react';
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, User, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { REGEX_SEARCH_HINT } from '@/libs/search';
-import { useQueryParamState } from '@/libs/useQueryParamState';
 
 export function Header() {
     const { logout, user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
-    const { value: searchValue, setValue: setSearchValue } = useQueryParamState('q');
-
-    const supportedSearch = useMemo(() => (
-        pathname?.startsWith('/recipients') ||
-        pathname?.startsWith('/groups') ||
-        pathname?.startsWith('/campaigns')
-    ), [pathname]);
 
     return (
         <header className="bg-card/50 backdrop-blur-md border-b border-border sticky top-0 z-30">
             <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-1">
-                    <div className="flex w-full md:w-1/3">
-                        <label htmlFor="search-field" className="sr-only">
-                            Search
-                        </label>
-                        <div className="relative w-full text-muted-foreground focus-within:text-foreground">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
-                                <Search className="h-5 w-5" aria-hidden="true" />
-                            </div>
-                            <input
-                                id="search-field"
-                                className="block h-full w-full bg-transparent border-transparent py-2 pl-8 pr-3 text-foreground placeholder-muted-foreground focus:border-transparent focus:placeholder-foreground focus:outline-none focus:ring-0 sm:text-sm"
-                                placeholder={supportedSearch ? `Search this page. ${REGEX_SEARCH_HINT}` : "Search is available on recipients, groups, and campaigns"}
-                                type="search"
-                                name="search"
-                                value={searchValue}
-                                onChange={(event) => {
-                                    if (!supportedSearch) return;
-                                    setSearchValue(event.target.value);
-                                }}
-                                disabled={!supportedSearch}
-                            />
-                        </div>
-                    </div>
-                </div>
+                <div className="flex flex-1"></div>
                 <div className="ml-4 flex items-center md:ml-6 gap-4">
                     <button
                         type="button"

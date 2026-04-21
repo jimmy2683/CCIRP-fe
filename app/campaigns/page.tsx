@@ -47,7 +47,7 @@ export default function CampaignsPage() {
             setIsLoading(true);
             try {
                 const data = await api.campaigns.list();
-                setCampaigns(data || []);
+                setCampaigns(data?.items || []);
             } catch (error) {
                 console.error('Failed to fetch campaigns:', error);
             } finally {

@@ -84,8 +84,8 @@ export default function GroupsPage() {
                 api.groups.list(),
                 api.groups.listDynamicPreferences(),
             ]);
-            setRecipients(recipientList || []);
-            setGroups(groupList || []);
+            setRecipients(recipientList?.items || []);
+            setGroups(groupList?.items || []);
             setDynamicPreferences(preferenceList || []);
         } catch (error) {
             console.error("Failed to load groups page data:", error);
