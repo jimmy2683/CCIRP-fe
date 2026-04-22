@@ -267,7 +267,7 @@ export default function CampaignsPage() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2 text-muted-foreground">
-                                                    <Link href={`/campaigns/${campaign._id || campaign.id}/analytics`} className="hover:text-primary p-1" title="View Analytics">
+                                                    <Link href={`/dashboard/campaigns/${campaign._id || campaign.id}`} className="hover:text-primary p-1" title="View Analytics">
                                                         <BarChart3 className="w-4 h-4" />
                                                     </Link>
                                                     <button className="cursor-pointer hover:text-primary p-1" title="Retry campaign">

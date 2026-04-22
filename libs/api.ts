@@ -456,6 +456,35 @@ export const analyticsAPI = {
             cacheTTL: DEFAULT_CACHE_TTL,
         });
     },
+    exportCampaignAnalytics: async (id: string, name: string) => {
+        const access_token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        const headers: HeadersInit = {};
+        if (access_token) (headers as any)['Authorization'] = `Bearer ${access_token}`;
+
+        const response = await fetch(`${API_BASE_URL}/analytics/campaigns/${id}/export`, {
+            method: 'GET',
+            headers,
+        });
+
+        if (!response.ok) {
+            let errorMsg = 'Failed to export analytics';
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.detail || errorMsg;
+            } catch (e) {}
+            throw new Error(errorMsg);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `campaign_${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_analytics.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    },
 };
 
 export const settingsAPI = {
