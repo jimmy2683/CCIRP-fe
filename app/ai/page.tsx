@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Bot, User, Send, Sparkles, Paperclip, MoreHorizontal, FileText, Image } from 'lucide-react';
+import { Bot, User, Send, Sparkles, Paperclip, FileText } from 'lucide-react';
 
 const INITIAL_MESSAGES = [
     { id: 1, role: 'ai', content: "Hello! I'm your CCIRP AI Assistant. How can I help you optimize your communications today?" },
@@ -14,22 +14,28 @@ const SUGGESTIONS = [
     "Draft a re-engagement email for inactive users",
     "Suggest subject lines for a webinar invite",
     "Analyze my recent campaign performance",
-    "How do I set up a drip sequence?"
+    "How do I set up a drip sequence?",
 ];
 
 export default function AIPage() {
     const [messages, setMessages] = useState(INITIAL_MESSAGES);
     const [inputValue, setInputValue] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     const handleSend = () => {
         if (!inputValue.trim()) return;
-
-        // Add user message
         const newMsg = { id: Date.now(), role: 'user', content: inputValue };
         setMessages(prev => [...prev, newMsg]);
         setInputValue('');
 
-        // Mock AI response
         setTimeout(() => {
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
@@ -39,81 +45,79 @@ export default function AIPage() {
         }, 1000);
     };
 
-    const handleSuggestion = (text: string) => {
-        setInputValue(text);
-    };
+    const handleSuggestion = (text: string) => { setInputValue(text); };
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col h-[calc(100vh-8rem)]">
+            <div className="flex flex-col h-[calc(100vh-7.5rem)] max-h-[780px]">
 
                 {/* Header */}
-                <div className="flex items-center justify-between pb-4 mb-4 border-b border-border">
+                <div className="flex items-center justify-between pb-5 mb-5 border-b border-border/50">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 flex-shrink-0">
                             <Bot className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-foreground leading-none">Intelligence Assistant</h1>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Neural Engine Active
-                            </p>
+                            <h1 className="text-[18px] font-bold text-foreground leading-none">AI Assistant</h1>
+                            <div className="flex items-center gap-2 mt-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Neural Engine Active</p>
+                            </div>
                         </div>
                     </div>
-                    <button className="cursor-pointer text-muted-foreground hover:text-foreground p-2 rounded-xl hover:bg-accent/50 transition-all">
-                        <MoreHorizontal className="w-5 h-5" />
-                    </button>
                 </div>
 
-                {/* Chat Area */}
-                <div className="flex-1 bg-card rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col relative">
+                {/* Chat area */}
+                <div className="flex-1 bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden flex flex-col">
 
-                    {/* Messages Scroll Area */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                    {/* Messages */}
+                    <div className="flex-1 overflow-y-auto p-5 space-y-5">
                         {messages.map((msg) => (
                             <div
                                 key={msg.id}
-                                className={`flex gap-4 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+                                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
-                                {/* Avatar */}
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 shadow-md
-                  ${msg.role === 'user' ? 'bg-muted text-primary border border-border' : 'bg-primary text-primary-foreground'}`}
+                                {msg.role === 'ai' && (
+                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm">
+                                        <Bot className="w-4 h-4" />
+                                    </div>
+                                )}
+
+                                <div className={`max-w-[78%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed
+                                    ${msg.role === 'user'
+                                        ? 'bg-primary text-primary-foreground rounded-tr-sm shadow-sm shadow-primary/20'
+                                        : 'bg-muted/60 text-foreground rounded-tl-sm border border-border/50'
+                                    }`}
                                 >
-                                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-                                </div>
+                                    <p className="whitespace-pre-wrap m-0">{msg.content}</p>
 
-                                {/* Message Bubble */}
-                                <div className={`rounded-2xl px-5 py-3.5 shadow-lg border
-                  ${msg.role === 'user'
-                                        ? 'bg-primary text-primary-foreground rounded-tr-none border-primary/50'
-                                        : 'bg-muted text-foreground rounded-tl-none border-border prose prose-invert prose-sm'}`
-                                }>
-                                    <p className="whitespace-pre-wrap leading-relaxed m-0 text-sm">
-                                        {msg.content}
-                                    </p>
-
-                                    {/* Action buttons on AI response */}
                                     {msg.role === 'ai' && msg.id === 3 && (
-                                        <div className="mt-4 flex gap-2 pt-3 border-t border-white/5">
-                                            <button className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-accent/20 border border-border rounded-lg text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 transition-all">
+                                        <div className="mt-3 pt-3 border-t border-border/40">
+                                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/8 border border-primary/20 text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15 transition-all duration-150 cursor-pointer">
                                                 <FileText className="w-3.5 h-3.5" /> Save as Template
                                             </button>
                                         </div>
                                     )}
                                 </div>
+
+                                {msg.role === 'user' && (
+                                    <div className="h-8 w-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground flex-shrink-0 mt-0.5">
+                                        <User className="w-4 h-4" />
+                                    </div>
+                                )}
                             </div>
                         ))}
+                        <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Suggestions Layer */}
-                    <div className="px-6 pb-2 pt-4 bg-gradient-to-t from-gray-900 via-gray-900 to-transparent">
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {/* Suggestions */}
+                    <div className="px-5 py-3 border-t border-border/40 bg-muted/20">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
                             {SUGGESTIONS.map((s, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleSuggestion(s)}
-                                    className="cursor-pointer whitespace-nowrap px-4 py-2 bg-muted border border-border rounded-full text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 hover:border-primary/20 transition-all shadow-sm"
+                                    className="whitespace-nowrap px-3.5 py-1.5 bg-card border border-border/60 rounded-full text-[12px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all duration-150 cursor-pointer flex-shrink-0"
                                 >
                                     {s}
                                 </button>
@@ -121,43 +125,37 @@ export default function AIPage() {
                         </div>
                     </div>
 
-                    {/* Input Area */}
-                    <div className="p-4 bg-muted border-t border-border">
-                        <div className="relative flex items-center bg-card border border-border rounded-2xl p-2 shadow-2xl focus-within:ring-2 focus-within:ring-primary transition-all">
-                            <button className="cursor-pointer p-2 text-muted-foreground hover:text-primary transition-colors rounded-xl hover:bg-accent/50 ml-1">
-                                <Paperclip className="w-5 h-5" />
+                    {/* Input */}
+                    <div className="p-4 border-t border-border/40 bg-card">
+                        <div className="flex items-center gap-2 bg-muted/50 border border-border/60 rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all duration-150">
+                            <button className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-150 flex-shrink-0 cursor-pointer">
+                                <Paperclip className="w-4 h-4" />
                             </button>
-                            <button className="cursor-pointer p-2 text-muted-foreground hover:text-primary transition-colors rounded-xl hover:bg-accent/50">
-                                <Image className="w-5 h-5" />
-                            </button>
-
                             <input
                                 type="text"
-                                placeholder="Neural query..."
-                                className="flex-1 bg-transparent border-none focus:ring-0 px-4 text-sm text-foreground placeholder-muted-foreground font-medium"
+                                placeholder="Ask me anything about your campaigns..."
+                                className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-[14px] text-foreground placeholder:text-muted-foreground/60 font-medium min-w-0"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                             />
-
                             <button
                                 onClick={handleSend}
                                 disabled={!inputValue.trim()}
-                                className={`cursor-pointer p-2.5 rounded-xl ml-2 transition-all shadow-lg
-                  ${inputValue.trim()
-                                        ? 'bg-primary text-primary-foreground hover:opacity-90 hover:scale-[1.02] shadow-primary/20'
-                                        : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'}`}
+                                className={`h-8 w-8 flex items-center justify-center rounded-lg flex-shrink-0 transition-all duration-150 cursor-pointer
+                                    ${inputValue.trim()
+                                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90'
+                                        : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                                    }`}
                             >
-                                <Send className="w-5 h-5" />
+                                <Send className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="text-center mt-4">
-                            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[2px] flex items-center justify-center gap-2">
-                                <Sparkles className="w-3 h-3 text-primary" /> Human validation required for AI outputs
-                            </p>
-                        </div>
+                        <p className="text-center mt-3 text-[10px] text-muted-foreground/50 font-semibold uppercase tracking-widest flex items-center justify-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-primary/60" />
+                            AI outputs require human validation
+                        </p>
                     </div>
-
                 </div>
             </div>
         </DashboardLayout>

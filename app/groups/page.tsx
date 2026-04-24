@@ -321,67 +321,62 @@ export default function GroupsPage() {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 animate-fade-up">
+                {/* Page Header */}
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground">Groups</h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Build static groups once, and resolve dynamic groups just-in-time from live engagement scores.
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Audience</p>
+                        <h1 className="text-[28px] font-bold text-foreground tracking-tight leading-none">Groups</h1>
+                        <p className="mt-2 text-[14px] text-muted-foreground">
+                            Build static groups and resolve dynamic audiences from live engagement scores
                         </p>
                     </div>
-                    <div className="relative w-full lg:max-w-md">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <Search className="h-4 w-4 text-muted-foreground" />
-                        </div>
+                    <div className="relative w-full lg:max-w-sm">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
-                            className="block w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            placeholder={`Search groups, recipients, and tags. ${REGEX_SEARCH_HINT}`}
+                            className="block w-full rounded-xl border border-border/60 bg-card py-2.5 pl-10 pr-4 text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-150 shadow-sm"
+                            placeholder={`Search groups, recipients, tags… ${REGEX_SEARCH_HINT}`}
                             value={searchTerm}
                             onChange={(event) => setSearchTerm(event.target.value)}
                         />
                     </div>
                 </div>
 
+                {/* Summary cards */}
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                                <FolderPlus className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Static Groups</p>
-                                <p className="text-2xl font-bold text-foreground">{groups.length}</p>
-                            </div>
+                    <div className="bg-card rounded-2xl border border-border/60 px-5 py-4 flex items-center gap-4 shadow-sm">
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 flex-shrink-0">
+                            <FolderPlus className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-[12px] font-medium text-muted-foreground">Static Groups</p>
+                            <p className="text-[22px] font-bold text-foreground leading-none mt-0.5">{groups.length}</p>
                         </div>
                     </div>
-                    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-xl bg-sky-500/10 p-3 text-sky-400">
-                                <Sparkles className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Dynamic Tags</p>
-                                <p className="text-2xl font-bold text-foreground">{dynamicPreferences.length}</p>
-                            </div>
+                    <div className="bg-card rounded-2xl border border-border/60 px-5 py-4 flex items-center gap-4 shadow-sm">
+                        <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 flex-shrink-0">
+                            <Sparkles className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-[12px] font-medium text-muted-foreground">Dynamic Tags</p>
+                            <p className="text-[22px] font-bold text-foreground leading-none mt-0.5">{dynamicPreferences.length}</p>
                         </div>
                     </div>
-                    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-400">
-                                <Users className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Recipients in Scope</p>
-                                <p className="text-2xl font-bold text-foreground">{filteredRecipients.length}</p>
-                            </div>
+                    <div className="bg-card rounded-2xl border border-border/60 px-5 py-4 flex items-center gap-4 shadow-sm">
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 flex-shrink-0">
+                            <Users className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-[12px] font-medium text-muted-foreground">Recipients in Scope</p>
+                            <p className="text-[22px] font-bold text-foreground leading-none mt-0.5">{filteredRecipients.length}</p>
                         </div>
                     </div>
                 </div>
 
                 {!searchPattern.isValid && (
-                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-                        Regex search is invalid: {searchPattern.error}
+                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-[13px] text-amber-600 font-medium">
+                        Invalid regex: {searchPattern.error}
                     </div>
                 )}
 

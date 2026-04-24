@@ -13,25 +13,18 @@ const STATUS_OPTIONS = ['draft', 'queued', 'scheduled', 'dispatching', 'sent', '
 function formatStatus(status?: string) {
     return String(status || 'draft')
         .replace(/_/g, ' ')
-        .replace(/\b\w/g, (character) => character.toUpperCase());
+        .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function statusBadgeClass(status?: string) {
     switch (String(status || '').toLowerCase()) {
-        case 'sent':
-            return 'bg-emerald-500/10 text-emerald-400';
-        case 'scheduled':
-            return 'bg-amber-500/10 text-amber-400';
-        case 'dispatching':
-            return 'bg-sky-500/10 text-sky-400';
-        case 'queued':
-            return 'bg-violet-500/10 text-violet-400';
-        case 'failed':
-            return 'bg-rose-500/10 text-rose-400';
-        case 'partially_sent':
-            return 'bg-orange-500/10 text-orange-400';
-        default:
-            return 'bg-muted text-muted-foreground';
+        case 'sent':         return 'badge badge-success';
+        case 'scheduled':   return 'badge badge-warning';
+        case 'dispatching': return 'badge badge-info';
+        case 'queued':      return 'badge bg-violet-500/10 text-violet-600 ring-1 ring-inset ring-violet-500/20 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide';
+        case 'failed':      return 'badge badge-error';
+        case 'partially_sent': return 'badge bg-orange-500/10 text-orange-600 ring-1 ring-inset ring-orange-500/20 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide';
+        default:            return 'badge badge-neutral';
     }
 }
 
@@ -71,32 +64,19 @@ export default function CampaignsPage() {
     const filteredCampaigns = useMemo(() => {
         return campaigns.filter((campaign) => {
             const normalizedStatus = String(campaign.status || 'draft').toLowerCase();
-            if (selectedStatuses.length > 0 && !selectedStatuses.includes(normalizedStatus)) {
-                return false;
-            }
-
-            const matchesCampaign = matchesSearchPattern(
-                searchPattern,
-                campaign.name,
-                campaign.subject,
-                campaign.template_id,
-                ...(campaign.tags || []),
-                ...(campaign.group_ids || []),
-            );
-            if (!matchesCampaign) {
-                return false;
-            }
-
+            if (selectedStatuses.length > 0 && !selectedStatuses.includes(normalizedStatus)) return false;
+            const matchesCampaign = matchesSearchPattern(searchPattern, campaign.name, campaign.subject, campaign.template_id, ...(campaign.tags || []), ...(campaign.group_ids || []));
+            if (!matchesCampaign) return false;
             return matchesSearchPattern(recipientPattern, ...(campaign.recipients || []));
         });
     }, [campaigns, recipientPattern, searchPattern, selectedStatuses]);
 
-    const totalRecipients = filteredCampaigns.reduce((sum: number, campaign) => sum + (campaign.recipients?.length || 0), 0);
+    const totalRecipients = filteredCampaigns.reduce((sum: number, c) => sum + (c.recipients?.length || 0), 0);
 
     const toggleStatus = (status: string) => {
         setSelectedStatuses((current) => (
             current.includes(status)
-                ? current.filter((item) => item !== status)
+                ? current.filter((s) => s !== status)
                 : [...current, status]
         ));
     };
@@ -109,69 +89,62 @@ export default function CampaignsPage() {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col gap-6 animate-fade-up">
+
+                {/* Page Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Create, schedule, and manage your communication workflows.
-                        </p>
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Communications</p>
+                        <h1 className="text-[28px] font-bold text-foreground tracking-tight leading-none">Campaigns</h1>
+                        <p className="mt-2 text-[14px] text-muted-foreground">Create, schedule, and manage your communication workflows</p>
                     </div>
                     <Link
                         href="/campaigns/new"
-                        className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-px hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 cursor-pointer flex-shrink-0"
                     >
-                        <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        Create Campaign
+                        <Plus className="h-4 w-4" />
+                        New Campaign
                     </Link>
                 </div>
 
+                {/* Summary cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><Send className="w-5 h-5" /></div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Visible Campaigns</p>
-                            <p className="text-2xl font-bold text-foreground">{filteredCampaigns.length}</p>
+                    {[
+                        { icon: Send, label: 'Visible Campaigns', value: filteredCampaigns.length, color: 'bg-indigo-500/10 text-indigo-600' },
+                        { icon: Calendar, label: 'Scheduled', value: filteredCampaigns.filter((c) => String(c.status).toLowerCase() === 'scheduled').length, color: 'bg-amber-500/10 text-amber-600' },
+                        { icon: Users, label: 'Recipients', value: totalRecipients, color: 'bg-emerald-500/10 text-emerald-600' },
+                    ].map((card) => (
+                        <div key={card.label} className="bg-card rounded-2xl border border-border/60 px-5 py-4 flex items-center gap-4 shadow-sm">
+                            <div className={`p-2.5 rounded-xl ${card.color} flex-shrink-0`}>
+                                <card.icon className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <p className="text-[12px] font-medium text-muted-foreground">{card.label}</p>
+                                <p className="text-[22px] font-bold text-foreground leading-none mt-0.5">{card.value}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 text-primary rounded-xl"><Calendar className="w-5 h-5" /></div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
-                            <p className="text-2xl font-bold text-foreground">{filteredCampaigns.filter((campaign) => String(campaign.status).toLowerCase() === 'scheduled').length}</p>
-                        </div>
-                    </div>
-                    <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><Users className="w-5 h-5" /></div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Visible Recipients</p>
-                            <p className="text-2xl font-bold text-foreground">{totalRecipients}</p>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col gap-4">
-                    <div className="flex flex-col lg:flex-row gap-4">
+                {/* Filters */}
+                <div className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm space-y-4">
+                    <div className="flex flex-col lg:flex-row gap-3">
                         <div className="relative flex-1">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <Search className="h-5 w-5 text-muted-foreground" />
-                            </div>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <input
                                 type="text"
-                                className="block w-full bg-muted rounded-xl border-border pl-10 focus:border-primary focus:ring-primary sm:text-sm border py-2 text-foreground placeholder:text-muted-foreground"
-                                placeholder={`Search by campaign name, subject, tags, or IDs. ${REGEX_SEARCH_HINT}`}
+                                className="w-full bg-muted/60 border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-150"
+                                placeholder={`Search campaigns, subjects, tags… ${REGEX_SEARCH_HINT}`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="relative flex-1">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <ListFilter className="h-5 w-5 text-muted-foreground" />
-                            </div>
+                            <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <input
                                 type="text"
-                                className="block w-full bg-muted rounded-xl border-border pl-10 focus:border-primary focus:ring-primary sm:text-sm border py-2 text-foreground placeholder:text-muted-foreground"
-                                placeholder={`Filter by recipient email in the send list. ${REGEX_SEARCH_HINT}`}
+                                className="w-full bg-muted/60 border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-150"
+                                placeholder={`Filter by recipient email… ${REGEX_SEARCH_HINT}`}
                                 value={recipientSearch}
                                 onChange={(e) => setRecipientSearch(e.target.value)}
                             />
@@ -179,18 +152,19 @@ export default function CampaignsPage() {
                         <button
                             type="button"
                             onClick={clearFilters}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border/60 px-4 py-2.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-150 cursor-pointer"
                         >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                             Clear
                         </button>
                     </div>
 
+                    {/* Status filters */}
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
                             onClick={() => setSelectedStatuses([])}
-                            className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-medium transition-colors ${selectedStatuses.length === 0 ? 'bg-primary/10 text-primary' : 'border border-border text-muted-foreground hover:bg-accent/50'}`}
+                            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-150 cursor-pointer ${selectedStatuses.length === 0 ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'}`}
                         >
                             All
                         </button>
@@ -199,84 +173,101 @@ export default function CampaignsPage() {
                                 key={status}
                                 type="button"
                                 onClick={() => toggleStatus(status)}
-                                className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-medium transition-colors ${selectedStatuses.includes(status) ? 'bg-primary/10 text-primary' : 'border border-border text-muted-foreground hover:bg-accent/50'}`}
+                                className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-150 cursor-pointer ${selectedStatuses.includes(status) ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60'}`}
                             >
-                                {formatStatus(status)} ({statusCounts[status] || 0})
+                                {formatStatus(status)}
+                                {statusCounts[status] ? <span className="ml-1.5 opacity-70">({statusCounts[status]})</span> : null}
                             </button>
                         ))}
                     </div>
                 </div>
 
+                {/* Regex errors */}
                 {(!searchPattern.isValid || !recipientPattern.isValid) && (
-                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-[13px] text-amber-600 font-medium">
                         {!searchPattern.isValid && <div>Campaign search regex is invalid: {searchPattern.error}</div>}
                         {!recipientPattern.isValid && <div>Recipient email regex is invalid: {recipientPattern.error}</div>}
                     </div>
                 )}
 
-                <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden min-h-[400px]">
+                {/* Table */}
+                <div className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-64">
-                            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                <p className="text-[13px] text-muted-foreground font-medium">Loading campaigns...</p>
+                            </div>
                         </div>
                     ) : (
-                        <table className="min-w-full divide-y divide-border/50">
-                            <thead className="bg-accent/20">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Campaign Name</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Status</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Recipients</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Scheduled</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Created At</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                        <table className="min-w-full divide-y divide-border/40">
+                            <thead>
+                                <tr className="bg-muted/30">
+                                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Campaign</th>
+                                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Recipients</th>
+                                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Scheduled</th>
+                                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
+                                    <th className="px-6 py-3"><span className="sr-only">Actions</span></th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-transparent divide-y divide-border/50 text-sm">
+                            <tbody className="divide-y divide-border/40">
                                 {filteredCampaigns.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                                            No campaigns matched the current filters.
+                                        <td colSpan={6} className="px-6 py-14 text-center">
+                                            <p className="text-[13px] font-medium text-muted-foreground">
+                                                {campaigns.length === 0 ? 'No campaigns yet' : 'No campaigns match the current filters'}
+                                            </p>
+                                            {campaigns.length === 0 && (
+                                                <Link href="/campaigns/new" className="mt-2 inline-block text-[13px] text-primary font-semibold hover:underline">
+                                                    Create your first campaign →
+                                                </Link>
+                                            )}
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredCampaigns.map((campaign) => (
-                                        <tr key={campaign.id} className="hover:bg-accent/10 transition-colors">
+                                        <tr key={campaign.id} className="group hover:bg-muted/20 transition-colors duration-100">
                                             <td className="px-6 py-4">
-                                                <div className="font-medium text-foreground">{campaign.name}</div>
-                                                <div className="mt-1 text-xs text-muted-foreground">{campaign.subject || 'No subject'}</div>
+                                                <p className="text-[14px] font-semibold text-foreground">{campaign.name}</p>
+                                                <p className="mt-0.5 text-[12px] text-muted-foreground">{campaign.subject || 'No subject'}</p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${statusBadgeClass(campaign.status)}`}>
+                                                <span className={statusBadgeClass(campaign.status)}>
                                                     {formatStatus(campaign.status)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-muted-foreground">
-                                                <div>{campaign.recipients?.length || 0}</div>
+                                            <td className="px-6 py-4">
+                                                <p className="text-[14px] font-medium text-foreground">{campaign.recipients?.length || 0}</p>
                                                 {(campaign.recipients || []).length > 0 && (
-                                                    <div className="mt-1 max-w-xs truncate text-xs">
+                                                    <p className="mt-0.5 max-w-[160px] truncate text-[12px] text-muted-foreground">
                                                         {(campaign.recipients || []).slice(0, 2).join(', ')}
                                                         {(campaign.recipients || []).length > 2 ? '…' : ''}
-                                                    </div>
+                                                    </p>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                                            <td className="px-6 py-4 whitespace-nowrap text-[13px] text-muted-foreground">
                                                 {campaign.scheduled_at ? new Date(campaign.scheduled_at).toLocaleString() : 'Immediate'}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                                            <td className="px-6 py-4 whitespace-nowrap text-[13px] text-muted-foreground">
                                                 {new Date(campaign.created_at).toLocaleDateString()}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center justify-end gap-2 text-muted-foreground">
-                                                    <Link href={`/dashboard/campaigns/${campaign._id || campaign.id}`} className="hover:text-primary p-1" title="View Analytics">
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-1 text-muted-foreground">
+                                                    <Link
+                                                        href={`/dashboard/campaigns/${campaign._id || campaign.id}`}
+                                                        className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-150 cursor-pointer"
+                                                        title="View Analytics"
+                                                    >
                                                         <BarChart3 className="w-4 h-4" />
                                                     </Link>
-                                                    <button className="cursor-pointer hover:text-primary p-1" title="Retry campaign">
+                                                    <button className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer" title="Retry">
                                                         <RotateCcw className="w-4 h-4" />
                                                     </button>
-                                                    <button className="cursor-pointer hover:text-primary p-1" title="Duplicate campaign">
+                                                    <button className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer" title="Duplicate">
                                                         <Copy className="w-4 h-4" />
                                                     </button>
-                                                    <button className="cursor-pointer hover:text-foreground p-1" title="More actions">
+                                                    <button className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer" title="More">
                                                         <MoreVertical className="w-4 h-4" />
                                                     </button>
                                                 </div>

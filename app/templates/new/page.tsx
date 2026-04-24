@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { EditorCanvas } from '@/components/templates/EditorCanvas';
-import { ArrowLeft, Save, Loader2, Sparkles, AlertCircle, Layout } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle, Layout } from 'lucide-react';
 import { api } from '@/libs/api';
 
 export default function NewTemplatePage() {
@@ -22,8 +22,6 @@ export default function NewTemplatePage() {
     };
 
     const handleSave = async (blocks?: any[], html?: string) => {
-        // If called from EditorCanvas directly, it provides blocks and html
-        // If called from the "Deploy" button, it uses the state
         const finalName = name.trim();
         const finalHtml = html || bodyHtml;
 
@@ -53,57 +51,62 @@ export default function NewTemplatePage() {
 
     return (
         <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50">
-            {/* Immersive Top Bar */}
-            <header className="h-14 px-4 flex items-center justify-between bg-card/90 backdrop-blur-xl border-b border-border shadow-sm z-30">
-                <div className="flex items-center gap-4">
+
+            {/* Top Bar */}
+            <header className="h-[56px] flex items-center justify-between bg-card/95 backdrop-blur-xl border-b border-border/60 px-4 z-30 flex-shrink-0 shadow-sm">
+                <div className="flex items-center gap-3">
                     <Link
                         href="/templates"
-                        className="cursor-pointer p-2 hover:bg-accent/50 rounded-xl transition-all"
-                        aria-label="Back to Library"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 cursor-pointer"
+                        aria-label="Back to Templates"
                     >
-                        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                        <ArrowLeft className="w-4 h-4" />
                     </Link>
-                    <div className="h-6 w-px bg-border"></div>
-                    <div className="flex items-center gap-3 group">
-                        <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="w-px h-5 bg-border/60" />
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-primary/8 rounded-lg border border-primary/15">
                             <Layout className="w-4 h-4 text-primary" />
                         </div>
-                        <div className="flex flex-col">
+                        <div>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="text-xs font-bold bg-transparent border-none p-0 focus:ring-0 w-48 truncate text-foreground hover:bg-accent/50 rounded px-1 transition-colors outline-none"
-                                placeholder="Untitled Poster"
+                                className="text-[14px] font-semibold bg-transparent border-none p-0 focus:ring-0 w-44 truncate text-foreground hover:bg-muted/40 rounded px-1 transition-colors outline-none"
+                                placeholder="Template name"
                             />
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Draft Template</span>
-                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <div className="flex items-center gap-1.5 px-1">
+                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Draft</span>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center p-1 bg-muted border border-border rounded-xl gap-1">
+                <div className="flex items-center gap-3">
+                    {/* Edit/Preview toggle */}
+                    <div className="flex items-center gap-0.5 bg-muted/60 border border-border/60 rounded-lg p-0.5">
                         {['Edit', 'Preview'].map((mode) => (
                             <button
                                 key={mode}
                                 onClick={() => setIsPreview(mode === 'Preview')}
-                                className={`cursor-pointer px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${(mode === 'Preview') === isPreview
-                                    ? 'bg-primary text-primary-foreground shadow-md'
-                                    : 'text-muted-foreground hover:text-foreground'
-                                    }`}
+                                className={`px-4 py-1.5 text-[12px] font-semibold rounded-md transition-all duration-150 cursor-pointer ${
+                                    (mode === 'Preview') === isPreview
+                                        ? 'bg-card text-foreground shadow-sm border border-border/50'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
                             >
                                 {mode}
                             </button>
                         ))}
                     </div>
-                    <div className="h-6 w-px bg-border"></div>
+
+                    <div className="w-px h-5 bg-border/60" />
+
                     <button
                         onClick={() => handleSave()}
                         disabled={isSaving}
-                        className="cursor-pointer bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                        className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg text-[13px] font-semibold shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-px transition-all duration-150 disabled:opacity-50 cursor-pointer"
                     >
                         {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         Deploy
@@ -111,7 +114,7 @@ export default function NewTemplatePage() {
                 </div>
             </header>
 
-            {/* Editor Workbench */}
+            {/* Editor */}
             <main className="flex-1 overflow-hidden relative">
                 <EditorCanvas
                     onSave={handleSave}
@@ -120,11 +123,12 @@ export default function NewTemplatePage() {
                 />
             </main>
 
+            {/* Error toast */}
             {error && (
-                <div className="fixed bottom-6 right-6 z-[100] bg-destructive text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-up">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="text-xs font-bold">{error}</span>
-                    <button onClick={() => setError(null)} className="ml-4 opacity-50 hover:opacity-100">&times;</button>
+                <div className="fixed bottom-6 right-6 z-[100] bg-destructive text-white px-5 py-4 rounded-xl shadow-xl shadow-destructive/25 flex items-center gap-3 animate-slide-up">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-[13px] font-semibold">{error}</span>
+                    <button onClick={() => setError(null)} className="ml-3 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none">×</button>
                 </div>
             )}
         </div>
