@@ -249,6 +249,24 @@ export interface CampaignAnalyticsResponse {
     recipients: CampaignRecipientAnalytics[];
 }
 
+export interface AIConversationMeta {
+    id: string;
+    title: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AIConversationFull extends AIConversationMeta {
+    messages: Record<string, unknown>[];
+}
+
+export type SSEEvent =
+    | { type: 'text_delta'; text: string }
+    | { type: 'tool_start'; tool_name: string; tool_input: Record<string, unknown> }
+    | { type: 'tool_result'; tool_name: string; output: Record<string, unknown>; is_error: boolean }
+    | { type: 'done'; conversation_id: string; title: string }
+    | { type: 'error'; message: string };
+
 export interface GroupCsvImportResult {
     matched_recipient_ids: string[];
     matched_recipient_emails: string[];
@@ -588,6 +606,58 @@ export const groupAPI = {
     },
 };
 
+export const aiAPI = {
+    async *streamChat(conversationId: string | null, message: string): AsyncGenerator<SSEEvent> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        let response: Response;
+        try {
+            response = await fetch(`${API_BASE_URL}/ai/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ conversation_id: conversationId, message }),
+            });
+        } catch {
+            yield { type: 'error', message: 'Network error — could not reach the server.' };
+            return;
+        }
+
+        if (!response.ok) {
+            let msg = `HTTP ${response.status}`;
+            try { const d = await response.json(); msg = d.detail || d.message || msg; } catch { /* ignore */ }
+            yield { type: 'error', message: msg };
+            return;
+        }
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                try { yield JSON.parse(line.slice(6)) as SSEEvent; } catch { /* skip malformed */ }
+            }
+        }
+    },
+
+    listConversations: (skip = 0, limit = 50) =>
+        fetchAPI<PaginatedResponse<AIConversationMeta>>(`/ai/conversations?skip=${skip}&limit=${limit}`),
+
+    getConversation: (id: string) =>
+        fetchAPI<AIConversationFull>(`/ai/conversations/${id}`),
+
+    deleteConversation: (id: string) =>
+        fetchAPI<void>(`/ai/conversations/${id}`, { method: 'DELETE' }),
+};
+
 // Main Export
 export const api = {
     auth: authAPI,
@@ -598,6 +668,7 @@ export const api = {
     settings: settingsAPI,
     recipients: recipientAPI,
     groups: groupAPI,
+    ai: aiAPI,
 };
 
 export default api;

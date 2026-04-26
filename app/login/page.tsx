@@ -4,25 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { api } from "@/libs/api";
 import Link from "next/link";
-import { Zap, Mail, Users, BarChart3, AlertCircle, Loader2 } from "lucide-react";
-
-const FEATURES = [
-    {
-        icon: Mail,
-        title: "Multi-channel delivery",
-        description: "Email, SMS, and WhatsApp in one unified platform",
-    },
-    {
-        icon: Users,
-        title: "Intelligent segmentation",
-        description: "AI-powered audience targeting and dynamic groups",
-    },
-    {
-        icon: BarChart3,
-        title: "Real-time analytics",
-        description: "Track engagement metrics and campaign performance",
-    },
-];
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -45,102 +27,100 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex h-screen bg-background">
+        <div className="flex h-screen">
 
-            {/* Left brand panel */}
-            <div className="hidden lg:flex lg:w-[52%] flex-col justify-between bg-[#07101E] px-12 py-10 relative overflow-hidden flex-shrink-0">
+            {/* Left editorial panel */}
+            <div className="hidden lg:flex lg:w-[48%] flex-col justify-between bg-[#16120D] px-14 py-12 relative overflow-hidden flex-shrink-0">
 
-                {/* Decorative background */}
-                <div className="absolute inset-0 bg-grid pointer-events-none" />
-                <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-indigo-600/15 blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-indigo-900/25 blur-3xl pointer-events-none" />
-                <div className="absolute top-1/2 right-0 w-64 h-64 rounded-full bg-purple-900/10 blur-3xl pointer-events-none" />
+                {/* Decorative partial circles — editorial, not orbs */}
+                <svg className="absolute -bottom-16 -right-16 w-[380px] h-[380px] opacity-[0.06] pointer-events-none" viewBox="0 0 380 380" fill="none">
+                    <circle cx="320" cy="320" r="260" stroke="#C8924A" strokeWidth="1" />
+                    <circle cx="320" cy="320" r="180" stroke="#C8924A" strokeWidth="0.5" />
+                </svg>
 
-                {/* Logo */}
-                <div className="relative flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-xl shadow-indigo-900/60 flex-shrink-0">
-                        <Zap className="h-5 w-5 text-white" />
+                {/* Thin right edge rule */}
+                <div className="absolute top-0 right-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#C8924A]/15 to-transparent" />
+
+                {/* Wordmark */}
+                <div className="relative flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-md bg-[#C8924A] flex items-center justify-center flex-shrink-0">
+                        <span className="text-[#16120D] text-[14px] font-black leading-none">C</span>
                     </div>
-                    <div>
-                        <p className="text-xl font-bold text-white tracking-tight">CCIRP</p>
-                        <p className="text-[10px] text-indigo-400/70 font-medium uppercase tracking-widest">Enterprise Platform</p>
-                    </div>
+                    <span className="text-[#F5EDE4] text-[18px] font-bold tracking-tight">CCIRP</span>
                 </div>
 
-                {/* Main copy */}
-                <div className="relative space-y-10">
-                    <div>
-                        <h2 className="text-[40px] font-bold text-white leading-[1.15] tracking-tight">
-                            Communications<br />
-                            <span className="text-indigo-400">at Scale</span>
+                {/* Editorial headline + copy */}
+                <div className="relative max-w-[380px] space-y-8">
+                    <div className="space-y-2">
+                        <p className="text-[11px] font-semibold text-[#C8924A] uppercase tracking-[0.2em]">
+                            Communications Platform
+                        </p>
+                        <h2 className="text-[44px] font-bold leading-[1.08] tracking-tight text-[#F5EDE4]">
+                            Send the right<br />
+                            message,<br />
+                            <em className="not-italic font-light text-[#C8924A]">every time.</em>
                         </h2>
-                        <p className="mt-5 text-white/50 text-[15px] leading-relaxed max-w-[360px]">
-                            The intelligent platform for modern teams to orchestrate multi-channel campaigns and drive measurable engagement.
+                    </div>
+
+                    <div className="border-l-2 border-[#C8924A]/30 pl-5 space-y-3">
+                        <p className="text-[14px] text-[#B8A99A] leading-[1.8]">
+                            CCIRP brings your email, SMS, and WhatsApp channels together with smart segmentation that responds to how your audience actually behaves.
+                        </p>
+                        <p className="text-[13px] text-[#6A5C54] leading-relaxed">
+                            For teams who measure what matters.
                         </p>
                     </div>
-
-                    <div className="space-y-4">
-                        {FEATURES.map((feature, i) => (
-                            <div key={i} className="flex items-start gap-4">
-                                <div className="h-9 w-9 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <feature.icon className="h-4 w-4 text-indigo-400" />
-                                </div>
-                                <div>
-                                    <p className="text-[13px] font-semibold text-white/80">{feature.title}</p>
-                                    <p className="text-[12px] text-white/35 mt-0.5 leading-relaxed">{feature.description}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
 
-                {/* Bottom */}
+                {/* Bottom footer */}
                 <div className="relative">
-                    <div className="h-px w-16 bg-white/10 mb-4" />
-                    <p className="text-[11px] text-white/20 font-medium">
-                        CCIRP Platform — Enterprise Communications Suite
+                    <div className="h-px w-10 bg-[#C8924A]/25 mb-4" />
+                    <p className="text-[11px] text-[#3D3028] font-medium tracking-wide">
+                        Central Communications &amp; Intelligent Reminder Platform
                     </p>
                 </div>
             </div>
 
             {/* Right form panel */}
-            <div className="flex-1 flex flex-col items-center justify-center bg-background px-8 py-12">
-                <div className="w-full max-w-[380px] animate-fade-up">
+            <div className="flex-1 flex flex-col items-center justify-center bg-[#FEFCF9] px-8 py-12">
+                <div className="w-full max-w-[360px] animate-fade-up">
 
-                    {/* Mobile logo */}
-                    <div className="lg:hidden flex items-center gap-3 mb-10">
-                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg">
-                            <Zap className="h-4.5 w-4.5 text-white" />
+                    {/* Mobile wordmark */}
+                    <div className="lg:hidden flex items-center gap-2.5 mb-10">
+                        <div className="h-7 w-7 rounded-md bg-[#C8924A] flex items-center justify-center flex-shrink-0">
+                            <span className="text-[#16120D] text-[14px] font-black leading-none">C</span>
                         </div>
-                        <p className="text-xl font-bold text-foreground">CCIRP</p>
+                        <span className="text-[18px] font-bold text-[#1A1310] tracking-tight">CCIRP</span>
                     </div>
 
                     {/* Heading */}
-                    <div className="mb-8">
-                        <h1 className="text-[26px] font-bold text-foreground tracking-tight">Welcome back</h1>
-                        <p className="mt-1.5 text-[14px] text-muted-foreground">
-                            Sign in to your account to continue
+                    <div className="mb-9">
+                        <h1 className="text-[28px] font-bold text-[#1A1310] tracking-tight leading-snug">
+                            Good to see you.
+                        </h1>
+                        <p className="mt-2 text-[14px] text-[#8C7A70]">
+                            Sign in and pick up where you left off.
                         </p>
                     </div>
 
                     {/* Error */}
                     {error && (
-                        <div className="mb-6 flex items-start gap-3 bg-rose-500/8 border border-rose-500/20 text-rose-600 px-4 py-3 rounded-xl text-[13px] font-medium">
+                        <div className="mb-6 flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg text-[13px] font-medium">
                             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                             {error}
                         </div>
                     )}
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
-                            <label className="block text-[13px] font-medium text-foreground mb-1.5">
-                                Email address
+                            <label className="block text-[11px] font-semibold text-[#5C4F48] mb-1.5 uppercase tracking-[0.1em]">
+                                Email
                             </label>
                             <input
                                 type="email"
                                 autoComplete="email"
-                                className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-[14px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60 transition-all duration-150 shadow-sm"
+                                className="w-full bg-white border border-[#E2D9D2] rounded-lg px-4 py-3 text-[14px] text-[#1A1310] placeholder:text-[#C5B8B0] focus:outline-none focus:ring-2 focus:ring-[#C8924A]/20 focus:border-[#C8924A]/50 transition-all duration-150"
                                 placeholder="you@company.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -150,15 +130,17 @@ export default function LoginPage() {
 
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-[13px] font-medium text-foreground">Password</label>
-                                <Link href="#" className="text-[12px] text-primary hover:text-primary/80 font-medium transition-colors">
-                                    Forgot password?
+                                <label className="text-[11px] font-semibold text-[#5C4F48] uppercase tracking-[0.1em]">
+                                    Password
+                                </label>
+                                <Link href="#" className="text-[12px] text-[#C8924A] hover:text-[#A87240] font-medium transition-colors">
+                                    Forgot it?
                                 </Link>
                             </div>
                             <input
                                 type="password"
                                 autoComplete="current-password"
-                                className="w-full bg-card border border-border rounded-xl px-4 py-2.5 text-[14px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60 transition-all duration-150 shadow-sm"
+                                className="w-full bg-white border border-[#E2D9D2] rounded-lg px-4 py-3 text-[14px] text-[#1A1310] placeholder:text-[#C5B8B0] focus:outline-none focus:ring-2 focus:ring-[#C8924A]/20 focus:border-[#C8924A]/50 transition-all duration-150"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -166,22 +148,22 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        <div className="pt-2">
+                        <div className="pt-1">
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/35 transition-all duration-200 text-[14px] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                                className="w-full flex items-center justify-center gap-2 bg-[#C8924A] hover:bg-[#B07840] active:bg-[#9A6835] text-white font-semibold py-3 rounded-lg transition-colors duration-150 text-[14px] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                             >
                                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                                {isLoading ? 'Signing in...' : 'Sign in'}
+                                {isLoading ? "Signing in…" : "Sign in"}
                             </button>
                         </div>
                     </form>
 
-                    <p className="mt-8 text-center text-[13px] text-muted-foreground">
-                        Don&apos;t have an account?{" "}
-                        <Link href="/register" className="text-primary hover:text-primary/80 font-semibold transition-colors">
-                            Create account
+                    <p className="mt-8 text-center text-[13px] text-[#8C7A70]">
+                        New here?{" "}
+                        <Link href="/register" className="text-[#C8924A] hover:text-[#A87240] font-semibold transition-colors">
+                            Create an account
                         </Link>
                     </p>
                 </div>
