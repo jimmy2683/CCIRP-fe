@@ -4,8 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
     Bot,
-    ChevronDown,
-    ChevronRight,
     Loader2,
     MessageSquarePlus,
     PanelLeftClose,
@@ -14,27 +12,17 @@ import {
     Sparkles,
     Trash2,
     User,
-    Wrench,
 } from "lucide-react";
 import { AIConversationMeta, SSEEvent, api } from "@/libs/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-interface ToolCallDisplay {
-    id: string;
-    toolName: string;
-    toolInput: Record<string, unknown>;
-    output?: Record<string, unknown>;
-    isError?: boolean;
-    status: "pending" | "done";
-    expanded: boolean;
-}
 
 interface DisplayMessage {
     id: string;
     role: "user" | "assistant";
     text: string;
-    toolCalls: ToolCallDisplay[];
     isStreaming?: boolean;
 }
 
@@ -57,23 +45,14 @@ function reconstructMessages(geminiMessages: Record<string, unknown>[]): Display
         if (msg.role === "user") {
             const textParts = (msg.parts || []).filter((p) => p.text);
             if (!textParts.length) continue;
-            out.push({ id: `h-${i}`, role: "user", text: textParts.map((p) => p.text as string).join(""), toolCalls: [] });
+            out.push({ id: `h-${i}`, role: "user", text: textParts.map((p) => p.text as string).join("") });
         } else if (msg.role === "model") {
             const textParts = (msg.parts || []).filter((p) => p.text);
-            const fcParts = (msg.parts || []).filter((p) => p.function_call);
-            if (!textParts.length && !fcParts.length) continue;
-            out.push({
-                id: `h-${i}`,
-                role: "assistant",
-                text: textParts.map((p) => p.text as string).join(""),
-                toolCalls: fcParts.map((p, j) => {
-                    const fc = p.function_call as { name: string; args: Record<string, unknown> };
-                    return { id: `h-${i}-${j}`, toolName: fc.name, toolInput: fc.args || {}, status: "done" as const, expanded: false };
-                }),
-            });
+            if (!textParts.length) continue;
+            out.push({ id: `h-${i}`, role: "assistant", text: textParts.map((p) => p.text as string).join("") });
         }
     }
-    return out.filter((m) => m.text || m.toolCalls.length);
+    return out.filter((m) => m.text);
 }
 
 const SUGGESTIONS = [
@@ -83,51 +62,80 @@ const SUGGESTIONS = [
     "List my saved static groups",
 ];
 
-// ── ToolCallBlock ─────────────────────────────────────────────────────────────
+// ── Markdown component map ────────────────────────────────────────────────────
 
-function ToolCallBlock({ tc, onToggle }: { tc: ToolCallDisplay; onToggle: (id: string) => void }) {
-    return (
-        <div className="mt-2 rounded-xl border border-border bg-background overflow-hidden text-xs">
-            <button
-                type="button"
-                onClick={() => onToggle(tc.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-accent/30 transition-colors"
-            >
-                <Wrench className="h-3 w-3 text-primary flex-shrink-0" />
-                <span className="font-mono font-semibold text-foreground flex-1 truncate">{tc.toolName}</span>
-                {tc.status === "pending" ? (
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground flex-shrink-0" />
-                ) : tc.isError ? (
-                    <span className="text-rose-400 text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Error</span>
-                ) : (
-                    <span className="text-emerald-500 text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Done</span>
-                )}
-                {tc.status === "done" && (
-                    tc.expanded
-                        ? <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        : <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                )}
-            </button>
-            {tc.expanded && tc.status === "done" && tc.output && (
-                <div className="border-t border-border px-3 py-2 max-h-48 overflow-y-auto">
-                    <pre className="text-[10px] leading-relaxed text-muted-foreground whitespace-pre-wrap break-all font-mono">
-                        {JSON.stringify(tc.output, null, 2)}
-                    </pre>
-                </div>
-            )}
+const MD_COMPONENTS = {
+    p: ({ children }: React.HTMLAttributes<HTMLParagraphElement>) => (
+        <p className="mb-2 last:mb-0 leading-[1.7]">{children}</p>
+    ),
+    h1: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
+        <h1 className="text-[16px] font-bold mt-4 mb-1.5 first:mt-0">{children}</h1>
+    ),
+    h2: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
+        <h2 className="text-[15px] font-bold mt-3 mb-1 first:mt-0">{children}</h2>
+    ),
+    h3: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
+        <h3 className="text-[14px] font-semibold mt-3 mb-1 first:mt-0">{children}</h3>
+    ),
+    ul: ({ children }: React.HTMLAttributes<HTMLUListElement>) => (
+        <ul className="list-disc pl-5 mb-2 space-y-0.5">{children}</ul>
+    ),
+    ol: ({ children }: React.HTMLAttributes<HTMLOListElement>) => (
+        <ol className="list-decimal pl-5 mb-2 space-y-0.5">{children}</ol>
+    ),
+    li: ({ children }: React.HTMLAttributes<HTMLLIElement>) => (
+        <li className="leading-[1.6]">{children}</li>
+    ),
+    strong: ({ children }: React.HTMLAttributes<HTMLElement>) => (
+        <strong className="font-semibold">{children}</strong>
+    ),
+    em: ({ children }: React.HTMLAttributes<HTMLElement>) => (
+        <em className="italic opacity-90">{children}</em>
+    ),
+    code: ({ children, className }: React.HTMLAttributes<HTMLElement>) => {
+        const isBlock = className?.includes("language-");
+        if (isBlock) {
+            return (
+                <code className="block bg-background/70 border border-border rounded-lg px-3 py-2 my-2 text-[12px] font-mono text-foreground whitespace-pre overflow-x-auto">
+                    {children}
+                </code>
+            );
+        }
+        return (
+            <code className="bg-background/70 border border-border rounded px-1.5 py-0.5 text-[12px] font-mono text-foreground">
+                {children}
+            </code>
+        );
+    },
+    pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
+        <pre className="my-2">{children}</pre>
+    ),
+    blockquote: ({ children }: React.HTMLAttributes<HTMLQuoteElement>) => (
+        <blockquote className="border-l-2 border-primary/40 pl-3 my-2 text-muted-foreground italic">{children}</blockquote>
+    ),
+    hr: () => <hr className="border-border/50 my-3" />,
+    a: ({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80 transition-opacity">{children}</a>
+    ),
+    table: ({ children }: React.HTMLAttributes<HTMLTableElement>) => (
+        <div className="overflow-x-auto my-2">
+            <table className="w-full text-[13px] border-collapse">{children}</table>
         </div>
-    );
-}
+    ),
+    thead: ({ children }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+        <thead className="border-b border-border">{children}</thead>
+    ),
+    th: ({ children }: React.ThHTMLAttributes<HTMLTableCellElement>) => (
+        <th className="text-left font-semibold px-2 py-1.5 text-foreground">{children}</th>
+    ),
+    td: ({ children }: React.TdHTMLAttributes<HTMLTableCellElement>) => (
+        <td className="px-2 py-1.5 border-b border-border/40 text-foreground/80">{children}</td>
+    ),
+};
 
 // ── MessageBubble ─────────────────────────────────────────────────────────────
 
-function MessageBubble({
-    msg,
-    onToggleTool,
-}: {
-    msg: DisplayMessage;
-    onToggleTool: (msgId: string, toolId: string) => void;
-}) {
+function MessageBubble({ msg }: { msg: DisplayMessage }) {
     const isUser = msg.role === "user";
     return (
         <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
@@ -144,20 +152,25 @@ function MessageBubble({
                             : "bg-muted/60 text-foreground rounded-tl-sm border border-border/50"
                     }`}
                 >
-                    {msg.text && (
-                        <p className="whitespace-pre-wrap m-0">
-                            {msg.text}
-                            {msg.isStreaming && !msg.toolCalls.some((t) => t.status === "pending") && (
+                    {msg.text && isUser && (
+                        <p className="whitespace-pre-wrap m-0">{msg.text}</p>
+                    )}
+                    {msg.text && !isUser && (
+                        <div className="prose-ai">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={MD_COMPONENTS}
+                            >
+                                {msg.text}
+                            </ReactMarkdown>
+                            {msg.isStreaming && (
                                 <span className="inline-block w-0.5 h-3.5 bg-current ml-0.5 animate-pulse align-middle" />
                             )}
-                        </p>
+                        </div>
                     )}
-                    {!msg.text && msg.isStreaming && msg.toolCalls.length === 0 && (
+                    {!msg.text && msg.isStreaming && (
                         <span className="inline-block w-0.5 h-3.5 bg-current animate-pulse align-middle" />
                     )}
-                    {msg.toolCalls.map((tc) => (
-                        <ToolCallBlock key={tc.id} tc={tc} onToggle={(id) => onToggleTool(msg.id, id)} />
-                    ))}
                 </div>
             </div>
             {isUser && (
@@ -227,16 +240,6 @@ export default function AIPage() {
         }
     }, [activeConversationId]);
 
-    const handleToggleTool = useCallback((msgId: string, toolId: string) => {
-        setMessages((prev) =>
-            prev.map((m) =>
-                m.id === msgId
-                    ? { ...m, toolCalls: m.toolCalls.map((tc) => tc.id === toolId ? { ...tc, expanded: !tc.expanded } : tc) }
-                    : m
-            )
-        );
-    }, []);
-
     const handleSend = useCallback(async (overrideText?: string) => {
         const text = (overrideText ?? inputValue).trim();
         if (!text || isStreaming) return;
@@ -248,8 +251,8 @@ export default function AIPage() {
 
         setMessages((prev) => [
             ...prev,
-            { id: userMsgId, role: "user", text, toolCalls: [] },
-            { id: assistantMsgId, role: "assistant", text: "", toolCalls: [], isStreaming: true },
+            { id: userMsgId, role: "user", text },
+            { id: assistantMsgId, role: "assistant", text: "", isStreaming: true },
         ]);
 
         try {
@@ -273,29 +276,6 @@ export default function AIPage() {
         if (event.type === "text_delta") {
             setMessages((prev) =>
                 prev.map((m) => m.id === assistantMsgId ? { ...m, text: m.text + event.text } : m)
-            );
-        } else if (event.type === "tool_start") {
-            const tc: ToolCallDisplay = {
-                id: `tc-${Date.now()}-${Math.random()}`,
-                toolName: event.tool_name,
-                toolInput: event.tool_input,
-                status: "pending",
-                expanded: false,
-            };
-            setMessages((prev) =>
-                prev.map((m) => m.id === assistantMsgId ? { ...m, toolCalls: [...m.toolCalls, tc] } : m)
-            );
-        } else if (event.type === "tool_result") {
-            setMessages((prev) =>
-                prev.map((m) => {
-                    if (m.id !== assistantMsgId) return m;
-                    const updated = [...m.toolCalls];
-                    const idx = updated.findLastIndex((tc) => tc.toolName === event.tool_name && tc.status === "pending");
-                    if (idx !== -1) {
-                        updated[idx] = { ...updated[idx], output: event.output, isError: event.is_error, status: "done" };
-                    }
-                    return { ...m, toolCalls: updated };
-                })
             );
         } else if (event.type === "done") {
             setActiveConversationId(event.conversation_id);
@@ -387,13 +367,7 @@ export default function AIPage() {
                             <Bot className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-[16px] font-bold text-foreground leading-none">AI Assistant</h1>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                                    Gemini 2.0 Flash · 12 tools
-                                </p>
-                            </div>
+                            <h1 className="text-[16px] font-bold text-foreground leading-none">CCIRP Assistant</h1>
                         </div>
                         {!sidebarOpen && (
                             <button
@@ -423,7 +397,7 @@ export default function AIPage() {
                             </div>
                         ) : (
                             messages.map((msg) => (
-                                <MessageBubble key={msg.id} msg={msg} onToggleTool={handleToggleTool} />
+                                <MessageBubble key={msg.id} msg={msg} />
                             ))
                         )}
                         <div ref={messagesEndRef} />
@@ -473,10 +447,6 @@ export default function AIPage() {
                                 {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-center mt-2.5 text-[10px] text-muted-foreground/50 font-semibold uppercase tracking-widest flex items-center justify-center gap-1.5">
-                            <Sparkles className="w-3 h-3 text-primary/60" />
-                            AI outputs require human validation
-                        </p>
                     </div>
                 </div>
             </div>

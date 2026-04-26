@@ -620,7 +620,7 @@ export const aiAPI = {
                 body: JSON.stringify({ conversation_id: conversationId, message }),
             });
         } catch {
-            yield { type: 'error', message: 'Network error — could not reach the server.' };
+            yield { type: 'error', message: 'Network error: could not reach the server.' };
             return;
         }
 

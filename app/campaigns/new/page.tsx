@@ -998,7 +998,7 @@ export default function NewCampaignWizard() {
                                         {Object.entries(campaignData.mergeData).map(([key, value]) => (
                                             <div key={key} className="flex justify-between text-xs">
                                                 <span className="text-muted-foreground font-mono">{key}</span>
-                                                <span className="font-bold text-foreground truncate ml-2">{value || '—'}</span>
+                                                <span className="font-bold text-foreground truncate ml-2">{value || 'N/A'}</span>
                                             </div>
                                         ))}
                                     </div>

@@ -55,12 +55,18 @@ export default function TemplateEditPage() {
         setIsSaving(true);
         setError(null);
         try {
-            await api.templates.update(id, {
+            const updated = await api.templates.update(id, {
                 name: name,
                 body_html: finalHtml,
                 design_json: blocks || templateBlocks,
             });
-            router.push(`/templates/${id}`);
+            // If the backend forked into a new custom template, navigate there
+            const newId = updated?._id || updated?.id;
+            if (newId && newId !== id) {
+                router.replace(`/templates/${newId}`);
+            } else {
+                router.push(`/templates/${id}`);
+            }
         } catch (err) {
             console.error('Save failed:', err);
             setError('Failed to save changes. Please try again.');

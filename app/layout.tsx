@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CCIRP — Communications Platform",
+  title: "CCIRP Communications Platform",
   description: "Intelligent multi-channel communications at enterprise scale.",
 };
 

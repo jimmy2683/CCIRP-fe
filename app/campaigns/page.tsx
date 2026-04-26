@@ -34,6 +34,8 @@ export default function CampaignsPage() {
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const PAGE_SIZE = 20;
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         const fetchCampaigns = async () => {
@@ -49,6 +51,8 @@ export default function CampaignsPage() {
         };
         fetchCampaigns();
     }, []);
+
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, recipientSearch, selectedStatuses]);
 
     const searchPattern = parseSearchPattern(searchTerm);
     const recipientPattern = parseSearchPattern(recipientSearch);
@@ -72,6 +76,19 @@ export default function CampaignsPage() {
     }, [campaigns, recipientPattern, searchPattern, selectedStatuses]);
 
     const totalRecipients = filteredCampaigns.reduce((sum: number, c) => sum + (c.recipients?.length || 0), 0);
+
+    const totalCampaignPages = Math.ceil(filteredCampaigns.length / PAGE_SIZE);
+    const pagedCampaigns = filteredCampaigns.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const campaignStartRecord = filteredCampaigns.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+    const campaignEndRecord = Math.min(currentPage * PAGE_SIZE, filteredCampaigns.length);
+    const campaignPageNums: number[] = (() => {
+        const tot = totalCampaignPages;
+        const cur = currentPage;
+        if (tot <= 5) return Array.from({ length: tot }, (_, i) => i + 1);
+        if (cur <= 3) return [1, 2, 3, 4, 5];
+        if (cur >= tot - 2) return [tot - 4, tot - 3, tot - 2, tot - 1, tot];
+        return [cur - 2, cur - 1, cur, cur + 1, cur + 2];
+    })();
 
     const toggleStatus = (status: string) => {
         setSelectedStatuses((current) => (
@@ -200,6 +217,7 @@ export default function CampaignsPage() {
                             </div>
                         </div>
                     ) : (
+                        <>
                         <table className="min-w-full divide-y divide-border/40">
                             <thead>
                                 <tr className="bg-muted/30">
@@ -226,7 +244,7 @@ export default function CampaignsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredCampaigns.map((campaign) => (
+                                    pagedCampaigns.map((campaign) => (
                                         <tr key={campaign.id} className="group hover:bg-muted/20 transition-colors duration-100">
                                             <td className="px-6 py-4">
                                                 <p className="text-[14px] font-semibold text-foreground">{campaign.name}</p>
@@ -277,6 +295,39 @@ export default function CampaignsPage() {
                                 )}
                             </tbody>
                         </table>
+                        {totalCampaignPages > 1 && (
+                            <div className="bg-muted/20 border-t border-border/40 px-6 py-3.5 flex items-center justify-between">
+                                <p className="text-[12px] text-muted-foreground">
+                                    Showing <span className="font-semibold text-foreground">{campaignStartRecord}–{campaignEndRecord}</span> of <span className="font-semibold text-foreground">{filteredCampaigns.length}</span> campaigns
+                                </p>
+                                <nav className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setCurrentPage(p => p - 1)}
+                                        disabled={currentPage === 1}
+                                        className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Prev
+                                    </button>
+                                    {campaignPageNums.map(n => (
+                                        <button
+                                            key={n}
+                                            onClick={() => setCurrentPage(n)}
+                                            className={`h-7 w-7 flex items-center justify-center rounded-lg text-[12px] font-semibold transition-all duration-150 cursor-pointer ${n === currentPage ? 'bg-primary text-primary-foreground' : 'border border-border/60 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(p => p + 1)}
+                                        disabled={currentPage === totalCampaignPages}
+                                        className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </nav>
+                            </div>
+                        )}
+                        </>
                     )}
                 </div>
             </div>

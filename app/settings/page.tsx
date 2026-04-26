@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { api } from '@/libs/api';
 import {
     User, Shield, Palette, Info, Save, Loader2, Eye, EyeOff,
-    CheckCircle2, AlertCircle, Moon, Sun, Bell, BellOff
+    CheckCircle2, AlertCircle, Moon, Sun, Bell, BellOff, ShieldOff,
 } from 'lucide-react';
 
 type SettingsTab = 'profile' | 'security' | 'preferences';
@@ -33,6 +33,7 @@ export default function SettingsPage() {
         theme: 'dark',
         emailNotifications: true,
         campaignAlerts: true,
+        trackingConsent: true,
     });
 
     useEffect(() => {
@@ -49,6 +50,10 @@ export default function SettingsPage() {
                         is_active: data.is_active ?? true,
                         created_at: data.created_at || '',
                     });
+                    setPreferences(prev => ({
+                        ...prev,
+                        trackingConsent: (data as any).tracking_consent !== false,
+                    }));
                 }
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
@@ -98,6 +103,18 @@ export default function SettingsPage() {
         setPreferences(prev => ({ ...prev, theme: next }));
         if (typeof document !== 'undefined') {
             document.documentElement.classList.toggle('dark', next === 'dark');
+        }
+    };
+
+    const handleTrackingToggle = async () => {
+        const next = !preferences.trackingConsent;
+        setPreferences(prev => ({ ...prev, trackingConsent: next }));
+        try {
+            await api.settings.updateProfile({ tracking_consent: next } as any);
+            showMessage('success', next ? 'Activity tracking enabled.' : 'Activity tracking disabled. Your opens and clicks will no longer be recorded.');
+        } catch {
+            setPreferences(prev => ({ ...prev, trackingConsent: !next }));
+            showMessage('error', 'Failed to update tracking preference.');
         }
     };
 
@@ -365,7 +382,7 @@ export default function SettingsPage() {
                                             onClick={handleThemeToggle}
                                             className={`cursor-pointer relative w-11 h-6 rounded-full transition-colors duration-200 ${preferences.theme === 'dark' ? 'bg-primary' : 'bg-muted'}`}
                                         >
-                                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                            <span className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`} />
                                         </button>
                                     </div>
 
@@ -387,7 +404,7 @@ export default function SettingsPage() {
                                                 onClick={() => setPreferences(prev => ({ ...prev, emailNotifications: !prev.emailNotifications }))}
                                                 className={`cursor-pointer relative w-11 h-6 rounded-full transition-colors duration-200 ${preferences.emailNotifications ? 'bg-primary' : 'bg-muted'}`}
                                             >
-                                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.emailNotifications ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                <span className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.emailNotifications ? 'translate-x-5' : 'translate-x-0'}`} />
                                             </button>
                                         </div>
 
@@ -405,7 +422,33 @@ export default function SettingsPage() {
                                                 onClick={() => setPreferences(prev => ({ ...prev, campaignAlerts: !prev.campaignAlerts }))}
                                                 className={`cursor-pointer relative w-11 h-6 rounded-full transition-colors duration-200 ${preferences.campaignAlerts ? 'bg-primary' : 'bg-muted'}`}
                                             >
-                                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.campaignAlerts ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                <span className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.campaignAlerts ? 'translate-x-5' : 'translate-x-0'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Privacy */}
+                                    <div className="space-y-3">
+                                        <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">Privacy</h3>
+                                        <div className="flex items-center justify-between p-5 rounded-xl border border-border/60 bg-muted/20">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2.5 rounded-xl ${preferences.trackingConsent ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                    <ShieldOff className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[14px] font-semibold text-foreground">Activity Tracking</p>
+                                                    <p className="text-[12px] text-muted-foreground mt-0.5">
+                                                        {preferences.trackingConsent
+                                                            ? 'Email opens and link clicks are being recorded'
+                                                            : 'Tracking disabled. Your activity is not recorded.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleTrackingToggle}
+                                                className={`cursor-pointer relative w-11 h-6 rounded-full transition-colors duration-200 ${preferences.trackingConsent ? 'bg-primary' : 'bg-muted'}`}
+                                            >
+                                                <span className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${preferences.trackingConsent ? 'translate-x-5' : 'translate-x-0'}`} />
                                             </button>
                                         </div>
                                     </div>

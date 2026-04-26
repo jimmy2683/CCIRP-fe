@@ -322,7 +322,7 @@ export default function DashboardPage() {
                                         <tr key={c.id} className="group hover:bg-muted/20 transition-colors duration-100">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <p className="text-[14px] font-semibold text-foreground">{c.name}</p>
-                                                <p className="text-[12px] text-muted-foreground mt-0.5">{c.date || '—'}</p>
+                                                <p className="text-[12px] text-muted-foreground mt-0.5">{c.date || 'N/A'}</p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={getStatusBadge(c.status)}>

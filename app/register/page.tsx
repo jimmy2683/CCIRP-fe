@@ -40,7 +40,7 @@ export default function RegisterPage() {
             {/* Left editorial panel */}
             <div className="hidden lg:flex lg:w-[48%] flex-col justify-between bg-[#16120D] px-14 py-12 relative overflow-hidden flex-shrink-0">
 
-                {/* Decorative partial circles — editorial, not orbs */}
+                {/* Decorative partial circles - editorial, not orbs */}
                 <svg className="absolute -bottom-16 -right-16 w-[380px] h-[380px] opacity-[0.06] pointer-events-none" viewBox="0 0 380 380" fill="none">
                     <circle cx="320" cy="320" r="260" stroke="#C8924A" strokeWidth="1" />
                     <circle cx="320" cy="320" r="180" stroke="#C8924A" strokeWidth="0.5" />

@@ -15,7 +15,10 @@ function getErrorMessage(error: unknown, fallback: string) {
 export default function RecipientsPage() {
     const router = useRouter();
     const { value: searchTerm, setValue: setSearchTerm } = useQueryParamState('q');
+    const PAGE_SIZE = 50;
     const [recipients, setRecipients] = useState<Recipient[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [isImporting, setIsImporting] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -23,11 +26,13 @@ export default function RecipientsPage() {
     const [newRecipientData, setNewRecipientData] = useState({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchRecipients = async () => {
+    const fetchRecipients = async (page = 1) => {
         setIsLoading(true);
         try {
-            const data = await api.recipients.list();
+            const data = await api.recipients.list((page - 1) * PAGE_SIZE, PAGE_SIZE);
             setRecipients(data?.items || []);
+            setTotalCount(data?.total ?? 0);
+            setCurrentPage(page);
         } catch (err) {
             console.error("Failed to load recipients", err);
         } finally {
@@ -35,7 +40,7 @@ export default function RecipientsPage() {
         }
     };
 
-    useEffect(() => { fetchRecipients(); }, []);
+    useEffect(() => { fetchRecipients(1); }, []);
 
     const handleImportClick = () => { fileInputRef.current?.click(); };
 
@@ -46,7 +51,7 @@ export default function RecipientsPage() {
         try {
             const response = await api.recipients.importCSV(file);
             alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
-            fetchRecipients();
+            fetchRecipients(1);
         } catch (error: unknown) {
             alert(`Import failed: ${getErrorMessage(error, 'Could not import CSV')}`);
         } finally {
@@ -66,7 +71,7 @@ export default function RecipientsPage() {
             await api.recipients.create(payload);
             setNewRecipientData({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
             setIsAddModalOpen(false);
-            fetchRecipients();
+            fetchRecipients(1);
         } catch (error: unknown) {
             alert(`Failed to add: ${getErrorMessage(error, 'Could not create recipient')}`);
         } finally {
@@ -79,6 +84,16 @@ export default function RecipientsPage() {
         const fullName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim();
         return matchesSearchPattern(searchPattern, fullName, recipient.first_name, recipient.last_name, recipient.email, ...(recipient.tags || []));
     });
+
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    const startRecord = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+    const endRecord = Math.min(currentPage * PAGE_SIZE, totalCount);
+    const pageNums: number[] = (() => {
+        if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        if (currentPage <= 3) return [1, 2, 3, 4, 5];
+        if (currentPage >= totalPages - 2) return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        return [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+    })();
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this recipient?")) return;
@@ -102,7 +117,7 @@ export default function RecipientsPage() {
                         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Audience</p>
                         <h1 className="text-[28px] font-bold text-foreground tracking-tight leading-none">Recipients</h1>
                         <p className="mt-2 text-[14px] text-muted-foreground">
-                            {recipients.length} {recipients.length === 1 ? 'record' : 'records'} in your audience database
+                            {totalCount} {totalCount === 1 ? 'record' : 'records'} in your audience database
                         </p>
                     </div>
                     <div className="flex gap-2.5 flex-shrink-0">
@@ -254,22 +269,35 @@ export default function RecipientsPage() {
                     {/* Pagination */}
                     <div className="bg-muted/20 border-t border-border/40 px-6 py-3.5 flex items-center justify-between">
                         <p className="text-[12px] text-muted-foreground">
-                            Showing <span className="font-semibold text-foreground">1–{filteredRecipients.length}</span> of <span className="font-semibold text-foreground">{recipients.length}</span> recipients
+                            Showing <span className="font-semibold text-foreground">{startRecord}–{endRecord}</span> of <span className="font-semibold text-foreground">{totalCount}</span> recipients
                         </p>
-                        <nav className="flex items-center gap-1">
-                            <button className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer">
-                                Prev
-                            </button>
-                            <button className="h-7 w-7 flex items-center justify-center rounded-lg bg-primary text-[12px] font-semibold text-primary-foreground">
-                                1
-                            </button>
-                            <button className="h-7 w-7 flex items-center justify-center rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer">
-                                2
-                            </button>
-                            <button className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer">
-                                Next
-                            </button>
-                        </nav>
+                        {totalPages > 1 && (
+                            <nav className="flex items-center gap-1">
+                                <button
+                                    onClick={() => fetchRecipients(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Prev
+                                </button>
+                                {pageNums.map(n => (
+                                    <button
+                                        key={n}
+                                        onClick={() => fetchRecipients(n)}
+                                        className={`h-7 w-7 flex items-center justify-center rounded-lg text-[12px] font-semibold transition-all duration-150 cursor-pointer ${n === currentPage ? 'bg-primary text-primary-foreground' : 'border border-border/60 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                                    >
+                                        {n}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => fetchRecipients(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="h-7 px-3 rounded-lg border border-border/60 bg-card text-[12px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Next
+                                </button>
+                            </nav>
+                        )}
                     </div>
                 </div>
             </div>
