@@ -108,6 +108,7 @@ export default function NewCampaignWizard() {
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCheckingSpam, setIsCheckingSpam] = useState(false);
 
     const [templates, setTemplates] = useState<Template[]>([]);
     const [users, setUsers] = useState<UserProfileData[]>([]);
@@ -397,6 +398,27 @@ export default function NewCampaignWizard() {
     };
 
     const handleSubmit = async () => {
+        setIsCheckingSpam(true);
+        try {
+            const spamRes = await api.campaigns.checkSpam({
+                subject: campaignData.subject || 'No Subject',
+                template_id: campaignData.templateId || ''
+            });
+
+            if (spamRes.is_spam) {
+                alert(`Cannot send campaign. Spam detected: ${spamRes.reason} (Score: ${spamRes.score})`);
+                setIsCheckingSpam(false);
+                return;
+            }
+            alert("Passed spam tests! Sending campaign...");
+        } catch (error) {
+            console.error('Spam check failed:', error);
+            alert('Failed to run spam check. Please try again.');
+            setIsCheckingSpam(false);
+            return;
+        }
+        setIsCheckingSpam(false);
+
         setIsSubmitting(true);
         try {
             await api.campaigns.create({
@@ -1050,6 +1072,7 @@ export default function NewCampaignWizard() {
                         onClick={currentStep === 5 ? handleSubmit : nextStep}
                         disabled={
                             isSubmitting ||
+                            isCheckingSpam ||
                             (currentStep === 1 && (!campaignData.name || campaignData.channels.length === 0)) ||
                             (currentStep === 2 && !campaignData.templateId) ||
                             (currentStep === 3 && !allMergeFieldsFilled) ||
@@ -1060,8 +1083,8 @@ export default function NewCampaignWizard() {
                         }
                         className="inline-flex items-center rounded-xl bg-primary px-8 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isSubmitting ? 'Processing...' : currentStep === 5 ? 'Initiate Dispatch' : 'Continue Path'}
-                        {!isSubmitting && currentStep < 5 && <ChevronRight className="ml-2 w-4 h-4" />}
+                        {isCheckingSpam ? 'Checking for spam...' : isSubmitting ? 'Processing...' : currentStep === 5 ? 'Initiate Dispatch' : 'Continue Path'}
+                        {!isSubmitting && !isCheckingSpam && currentStep < 5 && <ChevronRight className="ml-2 w-4 h-4" />}
                     </button>
                 </div>
             </div>

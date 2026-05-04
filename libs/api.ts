@@ -455,6 +455,12 @@ export const campaignAPI = {
             cacheTTL: DEFAULT_CACHE_TTL,
         });
     },
+    checkSpam: async (data: { subject: string; template_id: string }) => {
+        return fetchAPI<{ is_spam: boolean; score: number; reason: string }>('/campaigns/check-spam', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
 };
 
 export const userAPI = {
