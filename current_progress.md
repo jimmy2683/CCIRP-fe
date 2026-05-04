@@ -30,6 +30,7 @@
     - *Step 3: Audience Definition:* Input metrics capturing designated `recipients` metrics.
     - *Step 4: Launch Review:* Statistical pre-flight checks summarizing payload sizes prior to final dispatch.
 - **Persistence Handling**: Fully mapped execution chaining wizard completions seamlessly to `POST /campaigns` logic.
+- **AI Content Moderation**: Synchronous pre-dispatch validation using the backend `/check-spam` API. Evaluates email, SMS, and WhatsApp content, providing immediate UI feedback and blocking non-compliant broadcasts.
 
 ### 5. API Client Layer (libs/api.ts)
 - **Extensible API Gateway**: Structured namespace dictionaries exporting structured API bridges.

@@ -61,6 +61,7 @@ frontend
     * *Step 2: Asset Binding:* Engaging UI selection from the retrieved unified Template Library.
     * *Step 3: Audience Definition:* Input metrics capturing designated `recipients` metrics.
     * *Step 4: Launch Review:* Statistical pre-flight checks summarizing payload sizes prior to final dispatch.
+* **AI Spam Detection Integration**: Synchronous pre-dispatch validation evaluating email, SMS, and WhatsApp content to block non-compliant broadcasts and protect IP reputation.
 * **Persistence Handling**: Fully mapped execution chaining wizard completions seamlessly to `POST /campaigns` logic.
 
 ### Premium Dark Mode
