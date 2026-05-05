@@ -54,6 +54,8 @@ export interface ConsentFlags {
 export interface EngagementStats {
     open_count_total: number;
     click_count_total: number;
+    bounce_count: number;
+    delivery_failure_count: number;
     unique_open_campaigns: string[];
     unique_click_campaigns: string[];
     clicked_domains: string[];
@@ -62,6 +64,51 @@ export interface EngagementStats {
     topic_scores: Record<string, number>;
     last_open_at: string | null;
     last_click_at: string | null;
+    last_bounced_at: string | null;
+    unsubscribed_at: string | null;
+}
+
+export interface CampaignEngagementHistory {
+    campaign_id: string;
+    campaign_name: string;
+    campaign_channels: string[];
+    campaign_tags: string[];
+    campaign_sent_at: string | null;
+    delivery_status: string;
+    open_count: number;
+    unique_open_count: number;
+    click_count: number;
+    unique_click_count: number;
+    last_open_at: string | null;
+    last_click_at: string | null;
+}
+
+export interface RecipientEngagementHistoryResponse {
+    recipient_id: string;
+    email: string;
+    engagement_summary: {
+        open_count_total: number;
+        click_count_total: number;
+        bounce_count: number;
+        delivery_failure_count: number;
+        last_open_at: string | null;
+        last_click_at: string | null;
+        last_bounced_at: string | null;
+        unsubscribed_at: string | null;
+    };
+    campaign_history: CampaignEngagementHistory[];
+}
+
+export interface CampaignLinkStat {
+    url: string;
+    total_clicks: number;
+    unique_clicks: number;
+    last_clicked_at: string | null;
+}
+
+export interface CampaignLinkAnalyticsResponse {
+    campaign_id: string;
+    links: CampaignLinkStat[];
 }
 
 export interface Recipient {
@@ -479,6 +526,12 @@ export const analyticsAPI = {
         return fetchAPI<any>(`/analytics/campaigns/${id}`, {
             cacheTTL: DEFAULT_CACHE_TTL,
         });
+    },
+    getCampaignLinks: async (id: string) => {
+        return fetchAPI<CampaignLinkAnalyticsResponse>(`/analytics/campaigns/${id}/links`);
+    },
+    getRecipientHistory: async (id: string, limit: number = 20) => {
+        return fetchAPI<RecipientEngagementHistoryResponse>(`/analytics/recipients/${id}?limit=${limit}`);
     },
     exportCampaignAnalytics: async (id: string, name: string) => {
         const access_token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;

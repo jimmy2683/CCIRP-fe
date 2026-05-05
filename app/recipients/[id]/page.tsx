@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { api, Recipient, RecipientUpdate } from '@/libs/api';
-import { ArrowLeft, Edit2, Mail, Phone, Clock, Tag, RefreshCw, BarChart2, CheckCircle2, XCircle } from 'lucide-react';
+import { api, Recipient, RecipientUpdate, RecipientEngagementHistoryResponse } from '@/libs/api';
+import { ArrowLeft, Edit2, Mail, Phone, Clock, Tag, RefreshCw, BarChart2, CheckCircle2, XCircle, AlertTriangle, MousePointerClick, Eye, Send, Ban } from 'lucide-react';
 
 export default function RecipientProfilePage() {
     const params = useParams();
@@ -12,6 +12,7 @@ export default function RecipientProfilePage() {
     const id = params.id as string;
 
     const [recipient, setRecipient] = useState<Recipient | null>(null);
+    const [history, setHistory] = useState<RecipientEngagementHistoryResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<Partial<Recipient>>({});
@@ -22,6 +23,8 @@ export default function RecipientProfilePage() {
             const data = await api.recipients.get(id);
             setRecipient(data);
             setEditData(data);
+            const hist = await api.analytics.getRecipientHistory(id, 20);
+            setHistory(hist);
         } catch (err: any) {
             console.error(err);
             alert(`Failed to load recipient: ${err.message}`);
@@ -216,65 +219,82 @@ export default function RecipientProfilePage() {
 
                     {/* Right Column: Engagement Telemetry */}
                     <div className="md:col-span-2 flex flex-col gap-6">
-                        <div className="bg-card rounded-2xl border border-border p-5 shadow-xl h-full flex flex-col">
-                            <div className="flex items-center gap-2 mb-6 border-b border-border pb-4">
-                                <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                                    <BarChart2 className="w-5 h-5" />
+                        {/* KPI row */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {[
+                                { label: 'Total Opens', value: recipient.engagement?.open_count_total ?? 0, icon: Eye, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                                { label: 'Total Clicks', value: recipient.engagement?.click_count_total ?? 0, icon: MousePointerClick, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+                                { label: 'Bounces', value: recipient.engagement?.bounce_count ?? 0, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                                { label: 'Failures', value: recipient.engagement?.delivery_failure_count ?? 0, icon: XCircle, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+                            ].map(({ label, value, icon: Icon, color, bg }) => (
+                                <div key={label} className="bg-card rounded-2xl border border-border p-4 shadow-sm flex flex-col gap-2">
+                                    <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
+                                        <Icon className={`w-4 h-4 ${color}`} />
+                                    </div>
+                                    <p className="text-2xl font-black text-foreground">{value}</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-foreground leading-none">Telemetry & Engagement</h3>
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">Real-time interaction history</p>
-                                </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="bg-muted rounded-xl p-4 border border-border">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Opens</p>
-                                    <p className="text-3xl font-black text-foreground">{recipient.engagement?.open_count_total || 0}</p>
-                                </div>
-                                <div className="bg-muted rounded-xl p-4 border border-border">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Clicks</p>
-                                    <p className="text-3xl font-black text-foreground">{recipient.engagement?.click_count_total || 0}</p>
-                                </div>
-                            </div>
+                            ))}
+                        </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-1">
-                                <div>
-                                    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 border-b border-border pb-2">Recent Activity</h4>
-                                    <ul className="space-y-4">
-                                        <li className="flex items-start gap-3">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                                            <div>
-                                                <p className="text-sm font-medium">Last Opened Email</p>
-                                                <p className="text-xs text-muted-foreground">{recipient.engagement?.last_open_at ? new Date(recipient.engagement.last_open_at).toLocaleString() : 'Never'}</p>
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-3">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
-                                            <div>
-                                                <p className="text-sm font-medium">Last Clicked Link</p>
-                                                <p className="text-xs text-muted-foreground">{recipient.engagement?.last_click_at ? new Date(recipient.engagement.last_click_at).toLocaleString() : 'Never'}</p>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                                
-                                <div>
-                                    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 border-b border-border pb-2">Engaged Campaigns</h4>
-                                    {(recipient.engagement?.unique_open_campaigns || []).length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {recipient.engagement.unique_open_campaigns.map((camp: string, i: number) => (
-                                                <span key={i} className="text-xs px-2.5 py-1 bg-accent rounded-md border border-border text-foreground font-medium">
-                                                    {camp}
-                                                </span>
-                                            ))}
+                        {/* Activity timestamps */}
+                        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                            <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <BarChart2 className="w-4 h-4" /> Activity Timestamps
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {[
+                                    { label: 'Last Opened', value: recipient.engagement?.last_open_at, dot: 'bg-emerald-400' },
+                                    { label: 'Last Clicked', value: recipient.engagement?.last_click_at, dot: 'bg-indigo-400' },
+                                    { label: 'Last Bounced', value: recipient.engagement?.last_bounced_at, dot: 'bg-amber-400' },
+                                    { label: 'Unsubscribed', value: recipient.engagement?.unsubscribed_at, dot: 'bg-rose-400' },
+                                ].map(({ label, value, dot }) => (
+                                    <div key={label} className="flex items-start gap-3">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${dot} mt-1.5 shrink-0`} />
+                                        <div>
+                                            <p className="text-xs font-semibold text-foreground">{label}</p>
+                                            <p className="text-xs text-muted-foreground">{value ? new Date(value).toLocaleString() : 'Never'}</p>
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic">No campaigns engaged yet</p>
-                                    )}
-                                </div>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
 
+                        {/* Campaign history */}
+                        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                    <Send className="w-4 h-4" /> Campaign History
+                                </h3>
+                                <span className="text-xs text-muted-foreground font-medium">{history?.campaign_history?.length ?? 0} campaigns</span>
+                            </div>
+                            {history && history.campaign_history.length > 0 ? (
+                                <div className="divide-y divide-border">
+                                    {history.campaign_history.map((c, i) => (
+                                        <div key={i} className="px-5 py-3 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-foreground truncate">{c.campaign_name}</p>
+                                                <p className="text-xs text-muted-foreground">{c.campaign_sent_at ? new Date(c.campaign_sent_at).toLocaleDateString() : '—'}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3 shrink-0 text-xs font-medium text-muted-foreground">
+                                                <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-emerald-400" />{c.unique_open_count}</span>
+                                                <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3 text-indigo-400" />{c.unique_click_count}</span>
+                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide
+                                                    ${c.delivery_status === 'delivered' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                      c.delivery_status === 'failed' ? 'bg-rose-500/10 text-rose-400' :
+                                                      'bg-muted text-muted-foreground'}`}>
+                                                    {c.delivery_status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="px-5 py-8 text-center">
+                                    <Ban className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm text-muted-foreground">No campaign history yet</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -4,11 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { AlertCircle, RefreshCw, ChevronLeft, Send, CheckCircle, XCircle, MousePointerClick, Eye, Download, Activity } from 'lucide-react';
+import { AlertCircle, RefreshCw, ChevronLeft, Send, CheckCircle, XCircle, MousePointerClick, Eye, Download, Activity, Link2 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import api from '@/libs/api';
+import api, { CampaignLinkStat } from '@/libs/api';
 
 export default function CampaignDetailedView() {
     const params = useParams();
@@ -16,6 +16,7 @@ export default function CampaignDetailedView() {
     const campaignId = params.id as string;
 
     const [analytics, setAnalytics] = useState<any>(null);
+    const [links, setLinks] = useState<CampaignLinkStat[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
@@ -24,8 +25,12 @@ export default function CampaignDetailedView() {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await api.analytics.getCampaignAnalytics(campaignId);
+            const [data, linkData] = await Promise.all([
+                api.analytics.getCampaignAnalytics(campaignId),
+                api.analytics.getCampaignLinks(campaignId).catch(() => ({ links: [] })),
+            ]);
             setAnalytics(data);
+            setLinks(linkData.links ?? []);
         } catch (err: any) {
             setError(err.message || "Failed to load campaign analytics");
         } finally {
@@ -166,6 +171,50 @@ export default function CampaignDetailedView() {
                         </div>
                     )}
                 </div>
+
+                {/* Top Links */}
+                {links.length > 0 && (
+                    <div className="rounded-2xl border border-border/60 bg-card/50 backdrop-blur-xl shadow-sm overflow-hidden mt-2">
+                        <div className="px-6 py-5 border-b border-border/50 bg-card/30 flex items-center gap-3">
+                            <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                <Link2 className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-foreground tracking-tight">Top Clicked Links</h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">Ranked by total clicks</p>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-border/50">
+                            {links.map((link, idx) => {
+                                const maxClicks = links[0]?.total_clicks || 1;
+                                const pct = Math.round((link.total_clicks / maxClicks) * 100);
+                                let displayUrl: string;
+                                try { displayUrl = new URL(link.url).hostname + new URL(link.url).pathname; } catch { displayUrl = link.url; }
+                                return (
+                                    <div key={idx} className="px-6 py-4 flex items-center gap-4 hover:bg-muted/30 transition-colors">
+                                        <span className="text-sm font-black text-muted-foreground w-6 shrink-0">#{idx + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-foreground truncate">{displayUrl}</p>
+                                            <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                                <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4 shrink-0 text-right">
+                                            <div>
+                                                <p className="text-sm font-bold text-foreground">{link.total_clicks}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">total</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-indigo-400">{link.unique_clicks}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">unique</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* Per-user activity table */}
                 <div className="rounded-2xl border border-border/60 bg-card/50 backdrop-blur-xl shadow-sm overflow-hidden mt-2">
