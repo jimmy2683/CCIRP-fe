@@ -46,6 +46,9 @@ libs/
 ├── api.ts                   # All API calls + TypeScript interfaces
 ├── search.ts                # Regex-aware search parsing
 └── useQueryParamState.ts    # URL query param state sync
+
+Technical_Specifications.pdf   # Formal technical specifications document
+current_progress.md            # Detailed feature progress tracker
 ```
 
 ---
@@ -163,6 +166,13 @@ api.templates.list()
 api.templates.preview(data)
 api.templates.testSend(id, data)
 ```
+
+---
+
+## Documentation
+
+- **[Technical_Specifications.pdf](Technical_Specifications.pdf)** — Comprehensive formal technical specifications document covering the full-stack CCIRP platform: system architecture, data models, dispatch pipeline, AI agent, tracking system, API reference, frontend specifications, and non-functional requirements.
+- **[current_progress.md](current_progress.md)** — Detailed feature-by-feature progress tracker.
 
 ---
 

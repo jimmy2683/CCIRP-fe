@@ -141,3 +141,7 @@ libs/
 └── useQueryParamState.ts    # URL query param state hook
 ```
 
+### 11. Project Documentation
+- **Technical Specifications PDF** (`Technical_Specifications.pdf`): A formal, LaTeX-compiled technical specifications document covering the complete CCIRP platform — architecture, data models, AI features, dispatch pipeline, tracking, analytics, API reference, frontend specifications, sequence flows, and non-functional requirements.
+
+
