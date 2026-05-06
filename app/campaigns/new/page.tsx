@@ -109,6 +109,8 @@ export default function NewCampaignWizard() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCheckingSpam, setIsCheckingSpam] = useState(false);
+    const [intentInput, setIntentInput] = useState('');
+    const [isFillingMergeFields, setIsFillingMergeFields] = useState(false);
 
     const [templates, setTemplates] = useState<Template[]>([]);
     const [users, setUsers] = useState<UserProfileData[]>([]);
@@ -377,6 +379,29 @@ export default function NewCampaignWizard() {
         }));
     };
 
+    const autoFillMergeFields = async () => {
+        if (!intentInput.trim() || mergeFields.length === 0) return;
+        setIsFillingMergeFields(true);
+        try {
+            const res = await api.ai.fillMergeFields({
+                intent: intentInput.trim(),
+                campaign_name: campaignData.name,
+                subject: campaignData.subject,
+                merge_fields: mergeFields,
+            });
+            if (res?.values) {
+                setCampaignData(prev => ({
+                    ...prev,
+                    mergeData: { ...prev.mergeData, ...res.values },
+                }));
+            }
+        } catch (err) {
+            console.error('AI fill failed:', err);
+        } finally {
+            setIsFillingMergeFields(false);
+        }
+    };
+
     const refreshDynamicAudiencePreview = async () => {
         if (dynamicGroupRequests.length === 0) {
             setDynamicGroupPreview([]);
@@ -633,22 +658,58 @@ export default function NewCampaignWizard() {
                                         <p className="text-xs text-muted-foreground mt-1">Recipient name and email will be filled automatically. Click Continue.</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
-                                        {mergeFields.map(field => (
-                                            <div key={field}>
-                                                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                                    {formatFieldLabel(field)}
-                                                    <span className="text-xs text-primary ml-2 font-mono">{`{{${field}}}`}</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    className="block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground"
-                                                    placeholder={`Enter value for ${formatFieldLabel(field)}`}
-                                                    value={campaignData.mergeData[field] || ''}
-                                                    onChange={(e) => updateMergeField(field, e.target.value)}
-                                                />
+                                    <div className="space-y-6">
+                                        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-primary" />
+                                                <span className="text-sm font-black text-foreground">AI Fill Assist</span>
                                             </div>
-                                        ))}
+                                            <p className="text-xs text-muted-foreground">
+                                                Describe the campaign intent and the AI will suggest values for all merge fields. You can edit them afterward.
+                                            </p>
+                                            <textarea
+                                                rows={3}
+                                                className="block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground text-sm resize-none"
+                                                placeholder={`e.g. "This is a placement drive reminder for final year CS students at IITH. The company is Google, role is SDE, deadline is May 20th."`}
+                                                value={intentInput}
+                                                onChange={(e) => setIntentInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                                        e.preventDefault();
+                                                        autoFillMergeFields();
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={autoFillMergeFields}
+                                                disabled={isFillingMergeFields || !intentInput.trim()}
+                                                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            >
+                                                {isFillingMergeFields
+                                                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Filling…</>
+                                                    : <><Sparkles className="w-3.5 h-3.5" />Auto-fill Fields</>
+                                                }
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {mergeFields.map(field => (
+                                                <div key={field}>
+                                                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                                        {formatFieldLabel(field)}
+                                                        <span className="text-xs text-primary ml-2 font-mono">{`{{${field}}}`}</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="block w-full rounded-xl border-border bg-background shadow-sm focus:border-primary focus:ring-primary border p-3 text-foreground"
+                                                        placeholder={`Enter value for ${formatFieldLabel(field)}`}
+                                                        value={campaignData.mergeData[field] || ''}
+                                                        onChange={(e) => updateMergeField(field, e.target.value)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>

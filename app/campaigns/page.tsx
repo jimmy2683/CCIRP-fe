@@ -34,6 +34,7 @@ export default function CampaignsPage() {
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [retryingId, setRetryingId] = useState<string | null>(null);
     const PAGE_SIZE = 20;
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -53,6 +54,19 @@ export default function CampaignsPage() {
     }, []);
 
     useEffect(() => { setCurrentPage(1); }, [searchTerm, recipientSearch, selectedStatuses]);
+
+    const handleRetry = async (campaignId: string) => {
+        setRetryingId(campaignId);
+        try {
+            await api.campaigns.retry(campaignId);
+            const data = await api.campaigns.list();
+            setCampaigns(data?.items || []);
+        } catch (err) {
+            console.error('Retry failed:', err);
+        } finally {
+            setRetryingId(null);
+        }
+    };
 
     const searchPattern = parseSearchPattern(searchTerm);
     const recipientPattern = parseSearchPattern(recipientSearch);
@@ -279,9 +293,19 @@ export default function CampaignsPage() {
                                                     >
                                                         <BarChart3 className="w-4 h-4" />
                                                     </Link>
-                                                    <button className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer" title="Retry">
-                                                        <RotateCcw className="w-4 h-4" />
-                                                    </button>
+                                                    {['failed', 'partially_sent'].includes(String(campaign.status)) && (
+                                                        <button
+                                                            onClick={() => handleRetry(String(campaign._id || campaign.id))}
+                                                            disabled={retryingId === String(campaign._id || campaign.id)}
+                                                            className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title="Retry failed sends"
+                                                        >
+                                                            {retryingId === String(campaign._id || campaign.id)
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                : <RotateCcw className="w-4 h-4" />
+                                                            }
+                                                        </button>
+                                                    )}
                                                     <button className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer" title="Duplicate">
                                                         <Copy className="w-4 h-4" />
                                                     </button>

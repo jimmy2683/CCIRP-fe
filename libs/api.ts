@@ -517,6 +517,11 @@ export const campaignAPI = {
             body: JSON.stringify(data),
         });
     },
+    retry: async (id: string) => {
+        return fetchAPI<{ queued: number; campaign_id: string }>(`/campaigns/${id}/retry`, {
+            method: 'POST',
+        });
+    },
 };
 
 export const userAPI = {
@@ -756,6 +761,17 @@ export const aiAPI = {
 
     deleteConversation: (id: string) =>
         fetchAPI<void>(`/ai/conversations/${id}`, { method: 'DELETE' }),
+
+    fillMergeFields: (payload: {
+        intent: string;
+        campaign_name?: string;
+        subject?: string;
+        merge_fields: string[];
+    }) =>
+        fetchAPI<{ values: Record<string, string> }>('/ai/fill-merge-fields', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        }),
 };
 
 // Main Export
