@@ -7,6 +7,7 @@ import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, Upload, X } from 'lu
 import { api, Recipient } from '@/libs/api';
 import { matchesSearchPattern, parseSearchPattern, REGEX_SEARCH_HINT } from '@/libs/search';
 import { useQueryParamState } from '@/libs/useQueryParamState';
+import { useToast, ConfirmDialog } from '@/components/ui/Toast';
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback;
@@ -25,6 +26,8 @@ export default function RecipientsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newRecipientData, setNewRecipientData] = useState({ first_name: '', last_name: '', email: '', phone: '', tags: '' });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+    const toast = useToast();
 
     const fetchRecipients = async (page = 1) => {
         setIsLoading(true);
@@ -50,10 +53,10 @@ export default function RecipientsPage() {
         setIsImporting(true);
         try {
             const response = await api.recipients.importCSV(file);
-            alert(`Import successful: ${response.success} added, ${response.skipped} skipped.`);
+            toast('success', `Import successful: ${response.success} added, ${response.skipped} skipped.`);
             fetchRecipients(1);
         } catch (error: unknown) {
-            alert(`Import failed: ${getErrorMessage(error, 'Could not import CSV')}`);
+            toast('error', `Import failed: ${getErrorMessage(error, 'Could not import CSV')}`);
         } finally {
             setIsImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -73,7 +76,7 @@ export default function RecipientsPage() {
             setIsAddModalOpen(false);
             fetchRecipients(1);
         } catch (error: unknown) {
-            alert(`Failed to add: ${getErrorMessage(error, 'Could not create recipient')}`);
+            toast('error', `Failed to add: ${getErrorMessage(error, 'Could not create recipient')}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -96,12 +99,11 @@ export default function RecipientsPage() {
     })();
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this recipient?")) return;
         try {
             await api.recipients.delete(id);
             setRecipients(recipients.filter(r => r.id !== id));
         } catch (error: unknown) {
-            alert(`Failed to delete: ${getErrorMessage(error, 'Could not delete recipient')}`);
+            toast('error', `Failed to delete: ${getErrorMessage(error, 'Could not delete recipient')}`);
         }
     };
 
@@ -248,7 +250,7 @@ export default function RecipientsPage() {
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDelete(recipient.id)}
+                                                            onClick={() => setPendingDeleteId(recipient.id)}
                                                             className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-150 cursor-pointer"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -366,6 +368,15 @@ export default function RecipientsPage() {
                     </div>
                 </div>
             )}
+            <ConfirmDialog
+                open={pendingDeleteId !== null}
+                title="Delete recipient?"
+                description="This action cannot be undone."
+                confirmLabel="Delete"
+                destructive
+                onConfirm={() => { const id = pendingDeleteId!; setPendingDeleteId(null); handleDelete(id); }}
+                onCancel={() => setPendingDeleteId(null)}
+            />
         </DashboardLayout>
     );
 }

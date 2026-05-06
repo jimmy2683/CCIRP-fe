@@ -30,6 +30,7 @@ import {
     Template,
     UserProfileData,
 } from '@/libs/api';
+import { useToast } from '@/components/ui/Toast';
 
 interface CampaignGroup {
     id: string;
@@ -105,6 +106,7 @@ function renderMergeFields(content: string, values: Record<string, string>): str
 
 export default function NewCampaignWizard() {
     const router = useRouter();
+    const toast = useToast();
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -416,7 +418,7 @@ export default function NewCampaignWizard() {
             setDynamicPreviewStale(false);
         } catch (error) {
             console.error('Failed to resolve dynamic groups:', error);
-            alert('Failed to resolve dynamic groups. Please try again.');
+            toast('error', 'Failed to resolve dynamic groups. Please try again.');
         } finally {
             setIsResolvingDynamicGroups(false);
         }
@@ -431,14 +433,14 @@ export default function NewCampaignWizard() {
             });
 
             if (spamRes.is_spam) {
-                alert(`Cannot send campaign. Spam detected: ${spamRes.reason} (Score: ${spamRes.score})`);
+                toast('error', `Cannot send campaign. Spam detected: ${spamRes.reason} (Score: ${spamRes.score})`);
                 setIsCheckingSpam(false);
                 return;
             }
-            alert("Passed spam tests! Sending campaign...");
+            toast('success', "Passed spam tests! Sending campaign...");
         } catch (error) {
             console.error('Spam check failed:', error);
-            alert('Failed to run spam check. Please try again.');
+            toast('error', 'Failed to run spam check. Please try again.');
             setIsCheckingSpam(false);
             return;
         }
@@ -461,7 +463,7 @@ export default function NewCampaignWizard() {
             router.push('/campaigns');
         } catch (error) {
             console.error('Failed to create campaign:', error);
-            alert('Failed to create campaign. Please try again.');
+            toast('error', 'Failed to create campaign. Please try again.');
         } finally {
             setIsSubmitting(false);
         }

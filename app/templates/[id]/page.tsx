@@ -7,11 +7,13 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ArrowLeft, Edit, Mail, Calendar, Eye, Send, History, Loader2, Code, Layout, CheckCircle2, Trash2 } from 'lucide-react';
 import { TestSendModal } from '@/components/templates/TestSendModal';
 import { api, Template } from '@/libs/api';
+import { useToast, ConfirmDialog } from '@/components/ui/Toast';
 
 export default function TemplateDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
+    const toast = useToast();
 
     const [template, setTemplate] = useState<Template | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +25,8 @@ export default function TemplateDetailsPage() {
     const [history, setHistory] = useState<any[]>([]);
     const [isRollingBack, setIsRollingBack] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [pendingRollbackVersion, setPendingRollbackVersion] = useState<number | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     const [sampleData, setSampleData] = useState<Record<string, string>>({});
 
@@ -84,37 +88,32 @@ export default function TemplateDetailsPage() {
     };
 
     const handleRollback = async (version: number) => {
-        if (!confirm(`Are you sure you want to rollback to version ${version}?`)) return;
-
         setIsRollingBack(true);
         try {
             const updated = await api.templates.rollback(id, version);
             setTemplate(updated);
             handlePreview(updated.body_html, sampleData, updated.subject);
 
-            // Refresh history
             const historyData = await api.templates.getHistory(id);
             setHistory(historyData);
 
-            alert(`Successfully rolled back to version ${version}. The current version is now ${updated.version}.`);
+            toast('success', `Rolled back to version ${version}. Current version is now ${updated.version}.`);
         } catch (error) {
             console.error('Rollback failed:', error);
-            alert('Failed to rollback. Please try again.');
+            toast('error', 'Failed to rollback. Please try again.');
         } finally {
             setIsRollingBack(false);
         }
     };
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) return;
-
         setIsDeleting(true);
         try {
             await api.templates.delete(id);
             router.push('/templates');
         } catch (error) {
             console.error('Deletion failed:', error);
-            alert('Failed to delete template. Please try again.');
+            toast('error', 'Failed to delete template. Please try again.');
             setIsDeleting(false);
         }
     };
@@ -174,7 +173,7 @@ export default function TemplateDetailsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={handleDelete}
+                            onClick={() => setDeleteConfirmOpen(true)}
                             disabled={isDeleting || template.is_common}
                             className="flex items-center gap-2 px-5 py-2.5 border border-rose-500/20 rounded-xl text-sm font-semibold text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 shadow-sm transition-all hover-lift cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             title={template.is_common ? "General templates cannot be deleted" : ""}
@@ -319,7 +318,7 @@ export default function TemplateDetailsPage() {
                                                         </div>
                                                     </div>
                                                     <button
-                                                        onClick={() => handleRollback(item.version)}
+                                                        onClick={() => setPendingRollbackVersion(item.version)}
                                                         disabled={isRollingBack}
                                                         className="cursor-pointer text-[10px] font-black text-muted-foreground hover:text-primary uppercase tracking-widest disabled:opacity-50"
                                                     >
@@ -345,6 +344,23 @@ export default function TemplateDetailsPage() {
                 onClose={() => setIsTestSendOpen(false)}
                 templateId={id}
                 sampleData={sampleData}
+            />
+            <ConfirmDialog
+                open={pendingRollbackVersion !== null}
+                title={`Rollback to version ${pendingRollbackVersion}?`}
+                description="The current version will be archived in history."
+                confirmLabel="Rollback"
+                onConfirm={() => { const v = pendingRollbackVersion!; setPendingRollbackVersion(null); handleRollback(v); }}
+                onCancel={() => setPendingRollbackVersion(null)}
+            />
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                title="Delete this template?"
+                description="This action cannot be undone."
+                confirmLabel="Delete"
+                destructive
+                onConfirm={() => { setDeleteConfirmOpen(false); handleDelete(); }}
+                onCancel={() => setDeleteConfirmOpen(false)}
             />
         </DashboardLayout>
     );

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { AlertCircle, RefreshCw, ChevronLeft, Send, CheckCircle, XCircle, MousePointerClick, Eye, Download, Activity, Link2 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -14,6 +15,7 @@ export default function CampaignDetailedView() {
     const params = useParams();
     const router = useRouter();
     const campaignId = params.id as string;
+    const toast = useToast();
 
     const [analytics, setAnalytics] = useState<any>(null);
     const [links, setLinks] = useState<CampaignLinkStat[]>([]);
@@ -52,7 +54,7 @@ export default function CampaignDetailedView() {
         try {
             await api.analytics.exportCampaignAnalytics(campaignId, campaignName);
         } catch (err: any) {
-            alert(err.message || "Failed to export");
+            toast('error', err.message || "Failed to export");
         } finally {
             setIsExporting(false);
         }
@@ -63,7 +65,7 @@ export default function CampaignDetailedView() {
         try {
             await api.analytics.exportCampaignLinkAnalytics(campaignId, campaignName);
         } catch (err: any) {
-            alert(err.message || "Failed to export links");
+            toast('error', err.message || "Failed to export links");
         } finally {
             setIsExportingLinks(false);
         }

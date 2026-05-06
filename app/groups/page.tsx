@@ -28,6 +28,7 @@ import {
     REGEX_SEARCH_HINT,
 } from "@/libs/search";
 import { useQueryParamState } from "@/libs/useQueryParamState";
+import { useToast, ConfirmDialog } from "@/components/ui/Toast";
 
 function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback;
@@ -75,6 +76,8 @@ export default function GroupsPage() {
         min_interactions: "1",
     });
     const csvInputRef = useRef<HTMLInputElement>(null);
+    const [pendingDeleteGroupId, setPendingDeleteGroupId] = useState<string | null>(null);
+    const toast = useToast();
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -181,11 +184,11 @@ export default function GroupsPage() {
 
     const handleCreateStaticGroup = async () => {
         if (!staticForm.name.trim()) {
-            alert("Please enter a static group name.");
+            toast('warning', "Please enter a static group name.");
             return;
         }
         if (selectedAudienceCount === 0) {
-            alert("Please add at least one recipient, imported group, or CSV match.");
+            toast('warning', "Please add at least one recipient, imported group, or CSV match.");
             return;
         }
 
@@ -200,23 +203,20 @@ export default function GroupsPage() {
             resetStaticBuilder();
             await fetchData();
         } catch (error) {
-            alert(getErrorMessage(error, "Failed to create static group"));
+            toast('error', getErrorMessage(error, "Failed to create static group"));
         } finally {
             setIsSavingStaticGroup(false);
         }
     };
 
     const handleDeleteGroup = async (groupId: string) => {
-        if (!confirm("Delete this static group?")) {
-            return;
-        }
         setIsDeletingGroupId(groupId);
         try {
             await api.groups.delete(groupId);
             setGroups((current) => current.filter((group) => group.id !== groupId));
             setSelectedImportGroupIds((current) => current.filter((value) => value !== groupId));
         } catch (error) {
-            alert(getErrorMessage(error, "Failed to delete static group"));
+            toast('error', getErrorMessage(error, "Failed to delete static group"));
         } finally {
             setIsDeletingGroupId(null);
         }
@@ -237,7 +237,7 @@ export default function GroupsPage() {
                 ...result.matched_recipient_ids,
             ]));
         } catch (error) {
-            alert(getErrorMessage(error, "Failed to import CSV for static groups"));
+            toast('error', getErrorMessage(error, "Failed to import CSV for static groups"));
         } finally {
             setIsImportingCsv(false);
             if (csvInputRef.current) {
@@ -252,11 +252,11 @@ export default function GroupsPage() {
         const minInteractionsText = (override?.min_interactions ?? dynamicForm.min_interactions).trim();
 
         if (!nextTag) {
-            alert("Please enter a tag before previewing the dynamic group.");
+            toast('warning', "Please enter a tag before previewing the dynamic group.");
             return;
         }
         if (!topKText) {
-            alert("Please enter a group size for this tag.");
+            toast('warning', "Please enter a group size for this tag.");
             return;
         }
 
@@ -271,7 +271,7 @@ export default function GroupsPage() {
             ]);
             setDynamicPreview(response.groups[0] || null);
         } catch (error) {
-            alert(getErrorMessage(error, "Failed to preview dynamic group"));
+            toast('error', getErrorMessage(error, "Failed to preview dynamic group"));
         } finally {
             setIsPreviewingDynamic(false);
         }
@@ -283,15 +283,15 @@ export default function GroupsPage() {
         const minInteractions = Number(dynamicForm.min_interactions || "1");
 
         if (!tag) {
-            alert("Please enter a tag.");
+            toast('warning', "Please enter a tag.");
             return;
         }
         if (!Number.isFinite(topK) || topK <= 0) {
-            alert("Please enter a valid group size.");
+            toast('warning', "Please enter a valid group size.");
             return;
         }
         if (!Number.isFinite(minInteractions) || minInteractions <= 0) {
-            alert("Please enter a valid minimum interaction count.");
+            toast('warning', "Please enter a valid minimum interaction count.");
             return;
         }
 
@@ -305,7 +305,7 @@ export default function GroupsPage() {
             await fetchData();
             await handlePreviewDynamicGroup();
         } catch (error) {
-            alert(getErrorMessage(error, "Failed to save dynamic-group preference"));
+            toast('error', getErrorMessage(error, "Failed to save dynamic-group preference"));
         } finally {
             setIsSavingDynamic(false);
         }
@@ -626,7 +626,7 @@ export default function GroupsPage() {
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDeleteGroup(group.id)}
+                                                    onClick={() => setPendingDeleteGroupId(group.id)}
                                                     disabled={isDeletingGroupId === group.id}
                                                     className="rounded-xl border border-border p-2 text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-60"
                                                     aria-label={`Delete ${group.name}`}
@@ -904,6 +904,15 @@ export default function GroupsPage() {
                     </div>
                 </div>
             </div>
+            <ConfirmDialog
+                open={pendingDeleteGroupId !== null}
+                title="Delete this group?"
+                description="Recipients in this group will not be deleted."
+                confirmLabel="Delete"
+                destructive
+                onConfirm={() => { const id = pendingDeleteGroupId!; setPendingDeleteGroupId(null); handleDeleteGroup(id); }}
+                onCancel={() => setPendingDeleteGroupId(null)}
+            />
         </DashboardLayout>
     );
 }

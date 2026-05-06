@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { api, Recipient, RecipientUpdate, RecipientEngagementHistoryResponse } from '@/libs/api';
 import { ArrowLeft, Edit2, Mail, Phone, Clock, Tag, RefreshCw, BarChart2, CheckCircle2, XCircle, AlertTriangle, MousePointerClick, Eye, Send, Ban } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 
 export default function RecipientProfilePage() {
     const params = useParams();
@@ -16,6 +17,7 @@ export default function RecipientProfilePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<Partial<Recipient>>({});
+    const toast = useToast();
 
     const fetchRecipient = async () => {
         setIsLoading(true);
@@ -27,7 +29,7 @@ export default function RecipientProfilePage() {
             setHistory(hist);
         } catch (err: any) {
             console.error(err);
-            alert(`Failed to load recipient: ${err.message}`);
+            toast('error', `Failed to load recipient: ${err.message}`);
         } finally {
             setIsLoading(false);
         }
@@ -44,7 +46,7 @@ export default function RecipientProfilePage() {
             setIsEditing(false);
             fetchRecipient();
         } catch (err: any) {
-            alert(`Save failed: ${err.message}`);
+            toast('error', `Save failed: ${err.message}`);
         }
     };
 

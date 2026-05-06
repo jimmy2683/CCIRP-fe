@@ -14,6 +14,7 @@ import {
     Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/Toast';
 
 export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +26,7 @@ export default function DashboardPage() {
     const [topTags, setTopTags] = useState<TopTag[]>([]);
     const [exportingId, setExportingId] = useState<string | null>(null);
     const [exportingOverview, setExportingOverview] = useState(false);
+    const toast = useToast();
 
     const fetchOverview = async () => {
         setIsLoading(true);
@@ -55,7 +57,7 @@ export default function DashboardPage() {
         try {
             await api.analytics.exportCampaignAnalytics(id, name);
         } catch (err: any) {
-            alert(err.message || "Failed to export");
+            toast('error', err.message || "Failed to export");
         } finally {
             setExportingId(null);
         }
@@ -66,7 +68,7 @@ export default function DashboardPage() {
         try {
             await api.analytics.exportOverviewAnalytics();
         } catch (err: any) {
-            alert(err.message || "Failed to export");
+            toast('error', err.message || "Failed to export");
         } finally {
             setExportingOverview(false);
         }
