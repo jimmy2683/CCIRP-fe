@@ -1,54 +1,143 @@
-# CCIRP Frontend - Current Progress
+# CCIRP Frontend — Current Progress
 
 ## Completed Features
 
-### 1. UI/UX Architecture & High-Fidelity Design
-- **Modern Dashboard**: Responsive shell featuring an intuitive, collapsible Sidebar and contextual Header architecture.
-- **Premium Design System**: Centralized design tokens mapped to scalable HSL root variables enabling rapid theme adaptation and cohesive styling (Tailwind CSS).
-- **Aesthetic Flourishes**: Rich deployment of Glassmorphism (backdrop-blur, translucent opacities), subtle multi-layered drop shadows, shimmer loading states, and floating slide-up animations for high perceived performance.
+### 1. UI/UX Architecture
+- **Design system**: Tailwind CSS with HSL root variables, dark-first theme. No DaisyUI badge classes — all status indicators use inline Tailwind classes for consistency.
+- **DashboardLayout**: Collapsible sidebar + header shell shared across all authenticated routes.
+- **Animations**: `animate-fade-in`, `animate-fade-up`, shimmer loading states.
+- **Glassmorphism**: `backdrop-blur`, translucent `bg-card/90` surfaces throughout.
 
-### 2. Authentication & Client Security
-- **Secure Sessions**: Global React Context (`AuthProvider`) wrapping application states to track authenticated users instantly.
-- **Request Interception**: Standardized fetch wrappers in `libs/api.ts` engineered to auto-inject Bearer tokens to all outgoing authenticated APIs.
-- **JWT Refresh Automation**: Built-in 401 interception logic intelligently attempting background token renewals before routing constraints fail.
-- **Auth UI Forms**: Beautifully crafted Login and Registration surfaces natively interacting with backend `/auth/login` and `/auth/register` endpoints.
-- **Route Guards**: Client-side middleware protecting `/dashboard`, `/templates`, and `/campaigns` from anonymous access.
+### 2. Authentication
+- `AuthProvider` React context wrapping the app; stores JWT in `localStorage`.
+- `fetchAPI` wrapper in `libs/api.ts` auto-injects `Authorization: Bearer` header and handles 401 refresh.
+- Route guards: unauthenticated users redirected to `/login` from all protected routes.
+- Endpoints: `/auth/login`, `/auth/register`, `/auth/refresh`.
 
-### 3. Template Workbench Module
-- **Infinite Canvas Environment**: Full-screen, distraction-free "builder" mode. Incorporates advanced Figma-style mathematical zoom levels (percentages) and Spacebar-drag panning capabilities across an unbounded workspace constraints.
-- **Drag & Drop JSON State**: Deeply integrated Visual Blocks structure serialized into raw `design_json`. Fully synced with Backend Create/Update endpoints to guarantee component arrangement persistence on reloads.
-- **Layers & Hierarchy Tab**: Distinct management pane reflecting real-time DOM/Block structural hierarchies.
-- **Granular Stylistic Control**: Property inspector offering pixel-perfect adjustments for typography, color layers, and border radiuses.
-- **Template Library**: Indexing catalog displaying remote collections utilizing elegant categorization, pill labels, and version tracking.
-- **Real-Time Render Previewing**: Isolated viewing modes requesting backend-hydrated HTML to demonstrate final client-facing outputs.
-- **Mock Sending Verification**: Actionable `TestSendModal` interface designed to request `/test-send` operations, executing template string-replacements matching target Recipient profiles.
+### 3. Template Workbench
+- Visual drag-and-drop canvas editor with infinite dotted grid, Ctrl+Wheel zoom, Spacebar-drag pan.
+- Layers panel, typography/color/layout property inspector.
+- Template library with category pills and version badges.
+- Template version history with rollback.
+- `TestSendModal`: dispatches a real email with sample merge data.
 
-### 4. Campaign Strategy Module
-- **Multi-Step Progression Pipeline**: A comprehensive 4-stage deployment UX (Campaign Wizard).
-    - *Step 1: Scope & Details:* Establishing campaign taxonomy (Name, Content Subject).
-    - *Step 2: Asset Binding:* Engaging UI selection from the retrieved unified Template Library.
-    - *Step 3: Audience Definition:* Input metrics capturing designated `recipients` metrics.
-    - *Step 4: Launch Review:* Statistical pre-flight checks summarizing payload sizes prior to final dispatch.
-- **Persistence Handling**: Fully mapped execution chaining wizard completions seamlessly to `POST /campaigns` logic.
-- **AI Content Moderation**: Synchronous pre-dispatch validation using the backend `/check-spam` API. Evaluates email, SMS, and WhatsApp content, providing immediate UI feedback and blocking non-compliant broadcasts.
+### 4. Campaign Creation Wizard (`app/campaigns/new/page.tsx`)
+Five-step wizard:
 
-### 5. API Client Layer (libs/api.ts)
-- **Extensible API Gateway**: Structured namespace dictionaries exporting structured API bridges.
+**Step 1 — Campaign Details**: Name, subject, channel toggles (Email / SMS / WhatsApp), dispatch time (`datetime-local`), tags.
 
-### 6. Refined UI/UX & Auth Flow
-- **Authentication**: Added a "Forgot Password" link to the login surface for enhanced user recovery.
-- **Audience Management**: Implemented "Select All/Deselect All" logic in recipient lists for bulk operations.
-- **Module Expansion**: Scaffolded and initialized the specialized AI Assistant and Analytics dashboard interfaces.
+**Step 2 — Select Template**: Grid of template cards; selecting resets merge data.
 
-## Codebase Topology
-- `app/layout.tsx` & `page.tsx`: Global Next.js app scaffolding.
-- `app/(auth)/`: Unauthenticated login and password recovery routing.
-- `app/templates/` & `app/campaigns/`: Complex multi-view structures for lists and wizards.
-- `app/ai/` & `app/analytics/`: High-level interfaces for intelligent features and data tracking.
-- `components/templates/`: Isolated Drag and Drop engine architectures.
-- `components/layout/`: Global navigation primitives.
-- `libs/api.ts`: Central networking module and interception core.
+**Step 3 — Merge Fields**: Custom `{{field}}` values extracted from selected template.
+- **AI Fill Assist panel**: textarea for free-text intent description + "Auto-fill Fields" button. Calls `POST /ai/fill-merge-fields`. Fills all non-auto fields (auto fields like `{{name}}` and `{{email}}` are injected at dispatch time). User can edit any value after fill. Ctrl+Enter triggers fill.
+- Live template preview panel (sticky on xl+) updates as fields are typed.
 
-## Immediate Next Steps
-- Implement data visualization logic for the Analytics dashboard.
-- Integrate the AI backend with the Assistant interface.
+**Step 4 — Audience**: Static groups, dynamic group preferences (with top-K override and live preview), individual user selection, "Select All / Deselect All". Phone-readiness warning for SMS/WhatsApp campaigns.
+
+**Step 5 — Review**: Summary cards, merge field values, dynamic audience tags, scheduled time, spam check gate before submit.
+
+### 5. Campaigns List (`app/campaigns/page.tsx`)
+- Filterable by status, searchable by name/recipient (supports regex search).
+- Paginated (20 per page).
+- Per-campaign actions:
+  - **Analytics** link → `/dashboard/campaigns/{id}`
+  - **Retry** button (RotateCcw icon) — only rendered for `failed` or `partially_sent` campaigns. Calls `POST /campaigns/{id}/retry`, shows spinner on that row, refreshes list on completion.
+  - Duplicate, More (currently visual-only placeholders).
+- Status badges use proper Tailwind classes per status.
+
+### 6. Sender Analytics Dashboard (`app/dashboard/page.tsx`)
+- **KPI cards**: Total Sent, Open Rate, Click Rate, Active Campaigns.
+- **30-day trend chart** (Recharts `AreaChart`): Opened (blue), Clicked (pink `#EC4899`), Unsubscribed (red dashed `#EF4444`) lines with gradient fills.
+- **Top Engaged Segments**: Tag-level open/click counts with progress bars.
+- **Recent Campaigns table**: Status badges, scheduled time (displayed in local timezone), action buttons always visible.
+  - "View all →" link to `/campaigns`.
+  - "Export All" button → `GET /analytics/overview/export` CSV download.
+- Status badge helper `statusStyle()` returns inline Tailwind classes (not DaisyUI).
+
+### 7. Campaign Analytics Detail (`app/dashboard/campaigns/[id]/page.tsx`)
+- Page header shows actual `campaign_name` from analytics response (not raw ID).
+- KPI cards: Total Sent, Delivered, Unique Opens, Unique Clicks.
+- Delivery timeline chart (hourly, 72h).
+- Recipient activity table with per-recipient status.
+- **Top Clicked Links panel**: ranked URLs with progress bars, total/unique click counts. Shown only when link data is non-empty.
+- **Export Campaign** button: filename uses `campaign_name` (previously used literal `'data'`).
+- **Export Links** button: appears only when link data is available → `GET /analytics/campaigns/{id}/links/export`.
+
+### 8. Recipient Profile (`app/recipients/[id]/page.tsx`)
+- **4 KPI cards**: Total Opens, Total Clicks, Bounces, Delivery Failures.
+- **Activity timestamps**: Last Opened, Last Clicked, Last Bounced, Unsubscribed At.
+- **Campaign history list**: campaigns the recipient was part of, with per-campaign open/click/delivery status and resolved campaign names.
+
+### 9. AI Assistant (`app/ai/page.tsx`)
+- Full chat interface streaming SSE from `POST /ai/chat`.
+- Tool use shown inline (tool_start / tool_result events).
+- Conversation history: sidebar listing past conversations, create new / delete.
+- Markdown rendering for AI responses.
+
+### 10. API Client (`libs/api.ts`)
+All backend communication centralized. Key namespaces:
+
+**`api.campaigns`**
+- `list()`, `get(id)`, `create(data)`, `getAnalytics(id)`, `checkSpam(data)`, `retry(id)`
+
+**`api.analytics`**
+- `getOverview()`, `getCampaignAnalytics(id)`, `getCampaignLinks(id)`, `getRecipientHistory(id, limit)`, `exportCampaignAnalytics(id, name)`, `exportCampaignLinkAnalytics(id, name)`, `exportOverviewAnalytics()`
+
+**`api.ai`**
+- `streamChat(conversationId, message)` — async generator yielding SSE events
+- `listConversations()`, `getConversation(id)`, `deleteConversation(id)`
+- `fillMergeFields({ intent, campaign_name, subject, merge_fields })` → `{ values: Record<string, string> }`
+
+**`api.recipients`** — list, get, create, update, delete
+
+**`api.groups`** — static groups CRUD, dynamic preferences, resolve, AI segmentation
+
+**`api.templates`** — list, get, create, update, delete, preview, testSend
+
+**`api.auth`**, **`api.users`**, **`api.settings`**
+
+Key interfaces added/updated:
+- `EngagementStats`: `bounce_count`, `delivery_failure_count`, `last_bounced_at`, `unsubscribed_at`
+- `CampaignAnalyticsResponse`: `campaign_name`, `campaign_channels`
+- `CampaignLinkStat`, `CampaignLinkAnalyticsResponse`
+- `RecipientEngagementHistoryResponse`, `CampaignEngagementHistory`
+- `TopTag`
+
+---
+
+## App Structure
+
+```
+app/
+├── layout.tsx               # Root layout, AuthProvider
+├── page.tsx                 # Redirects to /dashboard or /login
+├── login/ register/         # Public auth pages
+├── dashboard/
+│   ├── page.tsx             # Sender analytics overview
+│   └── campaigns/[id]/
+│       └── page.tsx         # Campaign analytics detail
+├── campaigns/
+│   ├── page.tsx             # Campaign list with retry
+│   └── new/
+│       └── page.tsx         # 5-step campaign wizard with AI fill
+├── templates/
+│   ├── page.tsx             # Template library
+│   ├── new/page.tsx         # Create template
+│   └── [id]/edit/page.tsx   # Visual editor
+├── recipients/
+│   ├── page.tsx             # Recipient list
+│   └── [id]/page.tsx        # Recipient profile with engagement KPIs
+├── groups/page.tsx          # Static & dynamic group management
+├── ai/page.tsx              # AI assistant chat
+└── settings/page.tsx        # User settings
+
+components/
+├── layout/DashboardLayout   # Sidebar + header
+└── templates/               # Drag-and-drop canvas components
+
+libs/
+├── api.ts                   # All API calls + TypeScript interfaces
+├── search.ts                # Regex-aware search pattern parsing
+└── useQueryParamState.ts    # URL query param state hook
+```
+
