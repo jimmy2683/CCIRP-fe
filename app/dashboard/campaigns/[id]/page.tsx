@@ -20,6 +20,7 @@ export default function CampaignDetailedView() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [isExportingLinks, setIsExportingLinks] = useState(false);
 
     const fetchCampaignAnalytics = async () => {
         setIsLoading(true);
@@ -44,14 +45,27 @@ export default function CampaignDetailedView() {
         }
     }, [campaignId]);
 
+    const campaignName = analytics?.campaign_name ?? campaignId;
+
     const handleExport = async () => {
         setIsExporting(true);
         try {
-            await api.analytics.exportCampaignAnalytics(campaignId, 'data');
+            await api.analytics.exportCampaignAnalytics(campaignId, campaignName);
         } catch (err: any) {
             alert(err.message || "Failed to export");
         } finally {
             setIsExporting(false);
+        }
+    };
+
+    const handleExportLinks = async () => {
+        setIsExportingLinks(true);
+        try {
+            await api.analytics.exportCampaignLinkAnalytics(campaignId, campaignName);
+        } catch (err: any) {
+            alert(err.message || "Failed to export links");
+        } finally {
+            setIsExportingLinks(false);
         }
     };
 
@@ -99,18 +113,30 @@ export default function CampaignDetailedView() {
                             <ChevronLeft className="h-5 w-5" />
                         </button>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground tracking-tight">Campaign Analytics</h1>
-                            <p className="mt-1 text-sm text-muted-foreground font-medium">Detailed view of campaign performance and recipient engagement</p>
+                            <h1 className="text-2xl font-bold text-foreground tracking-tight">{campaignName}</h1>
+                            <p className="mt-1 text-sm text-muted-foreground font-medium">Campaign analytics</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                        {isExporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                        Export to CSV
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {links.length > 0 && (
+                            <button
+                                onClick={handleExportLinks}
+                                disabled={isExportingLinks}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isExportingLinks ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                Export Links
+                            </button>
+                        )}
+                        <button
+                            onClick={handleExport}
+                            disabled={isExporting}
+                            className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                            {isExporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            Export CSV
+                        </button>
+                    </div>
                 </div>
 
                 {/* KPI Cards */}

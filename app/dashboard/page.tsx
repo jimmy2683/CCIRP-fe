@@ -6,8 +6,9 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { api } from '@/libs/api';
 import {
     Send, Eye, MousePointerClick, AlertTriangle, TrendingUp, Users,
-    Loader2, BarChart3, Activity, AlertCircle, RefreshCw, Download
+    Loader2, BarChart3, Activity, AlertCircle, RefreshCw, Download, Tag
 } from 'lucide-react';
+import { TopTag } from '@/libs/api';
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, Legend
@@ -21,7 +22,9 @@ export default function DashboardPage() {
     const [trendData, setTrendData] = useState<any[]>([]);
     const [campaignPerformance, setCampaignPerformance] = useState<any[]>([]);
     const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
+    const [topTags, setTopTags] = useState<TopTag[]>([]);
     const [exportingId, setExportingId] = useState<string | null>(null);
+    const [exportingOverview, setExportingOverview] = useState(false);
 
     const fetchOverview = async () => {
         setIsLoading(true);
@@ -33,6 +36,7 @@ export default function DashboardPage() {
                 if (data.trend_data) setTrendData(data.trend_data);
                 if (data.campaign_performance) setCampaignPerformance(data.campaign_performance);
                 if (data.recent_campaigns) setRecentCampaigns(data.recent_campaigns);
+                if (data.top_tags) setTopTags(data.top_tags);
             }
         } catch (err: any) {
             setError(err.message || 'Analytics API unavailable.');
@@ -57,6 +61,17 @@ export default function DashboardPage() {
         }
     };
 
+    const handleOverviewExport = async () => {
+        setExportingOverview(true);
+        try {
+            await api.analytics.exportOverviewAnalytics();
+        } catch (err: any) {
+            alert(err.message || "Failed to export");
+        } finally {
+            setExportingOverview(false);
+        }
+    };
+
     const stats = {
         totalCampaigns: overview?.total_campaigns ?? 0,
         messagesSent: overview?.messages_sent ?? '0',
@@ -66,13 +81,13 @@ export default function DashboardPage() {
         unsubscribeRate: overview?.unsubscribe_rate ?? '0%',
     };
 
-    const getStatusBadge = (status: string) => {
+    const statusStyle = (status: string): string => {
         switch (status.toLowerCase()) {
-            case 'sent': return 'badge badge-success';
-            case 'active': return 'badge badge-info';
-            case 'scheduled': return 'badge badge-warning';
-            case 'draft': return 'badge badge-neutral';
-            default: return 'badge badge-primary';
+            case 'sent': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            case 'active': return 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+            case 'scheduled': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+            case 'failed': return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+            default: return 'bg-muted text-muted-foreground border border-border';
         }
     };
 
@@ -125,20 +140,26 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-end justify-between">
                     <div>
                         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Overview</p>
-                        <h1 className="text-[28px] font-bold text-foreground tracking-tight leading-none">
-                            Dashboard
-                        </h1>
-                        <p className="mt-2 text-[14px] text-muted-foreground">
-                            Performance metrics across all campaigns
-                        </p>
+                        <h1 className="text-[28px] font-bold text-foreground tracking-tight leading-none">Dashboard</h1>
+                        <p className="mt-2 text-[14px] text-muted-foreground">Performance metrics across all campaigns</p>
                     </div>
-                    <Link
-                        href="/campaigns/new"
-                        className="mt-4 sm:mt-0 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-px hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 cursor-pointer"
-                    >
-                        <Send className="h-4 w-4" />
-                        New Campaign
-                    </Link>
+                    <div className="mt-4 sm:mt-0 flex items-center gap-2">
+                        <button
+                            onClick={handleOverviewExport}
+                            disabled={exportingOverview}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-card border border-border px-4 py-2.5 text-[13px] font-semibold text-foreground hover:bg-muted transition-all duration-200 cursor-pointer disabled:opacity-50"
+                        >
+                            {exportingOverview ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            Export All
+                        </button>
+                        <Link
+                            href="/campaigns/new"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-px hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 cursor-pointer"
+                        >
+                            <Send className="h-4 w-4" />
+                            New Campaign
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Stats Grid */}
@@ -195,16 +216,24 @@ export default function DashboardPage() {
                                     <AreaChart data={trendData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
                                         <defs>
                                             <linearGradient id="sentGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
+                                                <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
                                                 <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                                             </linearGradient>
                                             <linearGradient id="deliveredGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
+                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
                                                 <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                                             </linearGradient>
                                             <linearGradient id="openedGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25} />
+                                                <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2} />
                                                 <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="clickedGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EC4899" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#EC4899" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="unsubGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.15} />
+                                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" opacity={0.5} />
@@ -218,6 +247,8 @@ export default function DashboardPage() {
                                         <Area type="monotone" dataKey="sent" name="Sent" stroke="#6366F1" strokeWidth={2} fill="url(#sentGradient)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
                                         <Area type="monotone" dataKey="delivered" name="Delivered" stroke="#10B981" strokeWidth={2} fill="url(#deliveredGradient)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
                                         <Area type="monotone" dataKey="opened" name="Opened" stroke="#F59E0B" strokeWidth={2} fill="url(#openedGradient)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
+                                        <Area type="monotone" dataKey="clicked" name="Clicked" stroke="#EC4899" strokeWidth={2} fill="url(#clickedGradient)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
+                                        <Area type="monotone" dataKey="unsubscribed" name="Unsubscribed" stroke="#EF4444" strokeWidth={1.5} strokeDasharray="4 2" fill="url(#unsubGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                                         <Legend wrapperStyle={{ paddingTop: '16px', fontSize: '12px' }} iconType="circle" iconSize={7} />
                                     </AreaChart>
                                 </ResponsiveContainer>
@@ -297,6 +328,44 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
+                {/* Top Tags */}
+                {topTags.length > 0 && (
+                    <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="p-2.5 bg-primary/10 rounded-xl">
+                                <Tag className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-[15px] font-semibold text-foreground leading-none">Top Engaged Segments</h3>
+                                <p className="text-[11px] text-muted-foreground mt-1">By total opens + clicks</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {topTags.map((t, i) => {
+                                const maxTotal = topTags[0]?.total || 1;
+                                const pct = Math.round((t.total / maxTotal) * 100);
+                                return (
+                                    <div key={t.tag} className="flex items-center gap-4">
+                                        <span className="text-[11px] font-black text-muted-foreground w-4 shrink-0">#{i + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[13px] font-semibold text-foreground capitalize">{t.tag.replace(/_/g, ' ')}</span>
+                                                <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground">
+                                                    <span className="text-amber-500">{t.opens} opens</span>
+                                                    <span className="text-indigo-400">{t.clicks} clicks</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {/* Recent Activity Table */}
                 <div className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
@@ -304,6 +373,9 @@ export default function DashboardPage() {
                             <h3 className="text-[15px] font-semibold text-foreground">Recent Activity</h3>
                             <p className="text-[12px] text-muted-foreground mt-0.5">Latest {recentCampaigns.length} campaigns</p>
                         </div>
+                        <Link href="/campaigns" className="text-[12px] font-semibold text-primary hover:underline">
+                            View all →
+                        </Link>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-border/40">
@@ -325,7 +397,7 @@ export default function DashboardPage() {
                                                 <p className="text-[12px] text-muted-foreground mt-0.5">{c.date || 'N/A'}</p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={getStatusBadge(c.status)}>
+                                                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${statusStyle(c.status)}`}>
                                                     {c.status}
                                                 </span>
                                             </td>
@@ -345,18 +417,18 @@ export default function DashboardPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <button
                                                         onClick={(e) => handleExport(e, c.id, c.name)}
                                                         disabled={exportingId === c.id}
-                                                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                                                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-emerald-500 hover:text-white transition-all duration-150 disabled:opacity-50 cursor-pointer"
                                                         title="Export CSV"
                                                     >
                                                         {exportingId === c.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                                                     </button>
                                                     <Link
                                                         href={`/dashboard/campaigns/${c.id}`}
-                                                        className="h-7 px-3 flex items-center justify-center text-[12px] font-semibold bg-primary/8 text-primary hover:bg-primary hover:text-primary-foreground rounded-lg transition-all duration-150"
+                                                        className="h-7 px-3 flex items-center justify-center text-[12px] font-semibold bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-lg transition-all duration-150"
                                                     >
                                                         Details
                                                     </Link>

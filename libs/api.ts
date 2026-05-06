@@ -274,6 +274,8 @@ export interface CampaignRecipientAnalytics {
 }
 
 export interface CampaignAnalyticsResponse {
+    campaign_name: string;
+    campaign_channels: string[];
     supports_open_tracking: boolean;
     metrics: {
         total_sent: number;
@@ -294,6 +296,13 @@ export interface CampaignAnalyticsResponse {
         clicks: number;
     }>;
     recipients: CampaignRecipientAnalytics[];
+}
+
+export interface TopTag {
+    tag: string;
+    opens: number;
+    clicks: number;
+    total: number;
 }
 
 export interface AIConversationMeta {
@@ -532,6 +541,38 @@ export const analyticsAPI = {
     },
     getRecipientHistory: async (id: string, limit: number = 20) => {
         return fetchAPI<RecipientEngagementHistoryResponse>(`/analytics/recipients/${id}?limit=${limit}`);
+    },
+    exportCampaignLinkAnalytics: async (campaignId: string, campaignName: string) => {
+        const access_token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        const headers: HeadersInit = {};
+        if (access_token) (headers as any)['Authorization'] = `Bearer ${access_token}`;
+        const response = await fetch(`${API_BASE_URL}/analytics/campaigns/${campaignId}/links/export`, { headers });
+        if (!response.ok) throw new Error('Failed to export link analytics');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${campaignName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_links.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    },
+    exportOverviewAnalytics: async () => {
+        const access_token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        const headers: HeadersInit = {};
+        if (access_token) (headers as any)['Authorization'] = `Bearer ${access_token}`;
+        const response = await fetch(`${API_BASE_URL}/analytics/overview/export`, { headers });
+        if (!response.ok) throw new Error('Failed to export overview');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analytics_overview.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
     },
     exportCampaignAnalytics: async (id: string, name: string) => {
         const access_token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
